@@ -57,11 +57,14 @@ class FuncioOna:
 
     '''Apliquem la Traslació.'''
     def eval(self,x,t):
-        '''Defineixo aquesta funció auxiliar perquè només volem calcular la parcial respecte de x.'''
-        def fx(x):
-            return self.eval1(x,t)
-        '''Aproximació Taylor de grau 1 de T(x0)*f(x,t) = exp(-i*x0*p/hbar)*f(x,t)'''
-        return fx(x) - self.x0*misc.derivative(fx,x,dx=1e-18)
+        '''De forma pura hauriem de aproximar l'operador de traslació tal que així:'''
+        # '''Defineixo aquesta funció auxiliar perquè només volem calcular la parcial respecte de x.'''
+        # def fx(x):
+        #     return self.eval1(x,t)
+        # '''Aproximació Taylor de grau 1 de U(x0)*f(x,t) = exp(-i*x0*p/hbar)*f(x,t)'''
+        # return fx(x) - self.x0*misc.derivative(fx,x,dx=1e-18)
+        '''Però, com que sabem que U(x0)*f(x,t) = f(x-x0,t):'''
+        return self.eval1(x-self.x0,t)
 
     ''' Dibuixem la ona en un rang de X i de T. Aprofitem que només hem de reescriure les línies i no els eixos i tota la resta de la figura
     per fer-ho de forma molt eficient amb blit.'''
@@ -108,7 +111,7 @@ if __name__ == '__main__':
     estat.kick(p0=-1e-10)
     estat.ona.plot(x0=-5e-9, xf=5e-9, t0=0, tf=1, nx=1000, nt=20)
 
-    estat.traslacio(x0=1e-8)
+    estat.traslacio(x0=1e-9)
     estat.ona.plot(x0=-5e-9, xf=5e-9, t0=0, tf=1, nx=1000, nt=20)
 
     print('Sortida Correcta')
