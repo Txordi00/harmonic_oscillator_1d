@@ -10,21 +10,24 @@ from matplotlib.legend_handler import HandlerLine2D
 ''' Classe Estat. Aquí emmagatzeno tota la informació rellevant del estat. Gran part de la funcionalitat es subordinarà
  a altres classes/funcions. '''
 class Estat:
-    def __init__(self, coeffs, m=constants.m_e, k=1, x0=0, p0=0, traslacio=False, kick=False):
+    def __init__(self, coeffs, m=constants.m_e, k=1):
         self.m = m
-        self.x0 = x0
-        self.p0 = p0
         self.k = k
         self.coeffs = coeffs
         '''Dintre d'estat guardem la funció d'ona.'''
         self.ona = FuncioOna(coeffs=self.coeffs,m=self.m,k=self.k)
 
+    def kick(self,p0):
+        self.ona.p0 = self.ona.p0 + p0
+
 ''' Classe Funció d'ona. Aquí avaluem la funció d'ona i, per si es útil consultar-ho, emmagatzenem els darrers x i t, els coeficients
  i les constants a0 i omega. '''
 class FuncioOna:
     ''' Inicialització de la classe. Guardem les constants i els coeficients cn. '''
-    def __init__(self,coeffs, m=1, k=1):
+    def __init__(self,coeffs, m=1, k=1, x0=0, p0=0):
         self.coeffs = coeffs
+        self.x0 = x0
+        self.p0 = p0
         self.omega = math.sqrt(k/m)
         self.a0 = math.sqrt(constants.hbar/(m*self.omega))
 
@@ -36,10 +39,14 @@ class FuncioOna:
 
         ''' Calculem els coeficients que multiplicaràn als polinomis d'Hermite i després els multipliquem per ells i ho sumem
         amb la funció np.polynomial.hermite.hermval. '''
-        hermite_coeffs = [ coeffs[n]*1/( math.pi**(1/4) * math.sqrt(2**n*math.factorial(n)*self.a0) ) * math.exp(-(self.x/self.a0)**2 / 2) # f(n)*g(x)
+        hermite_coeffs = [ self.kick(self.p0,self.x)
+                           * coeffs[n]*1/( math.pi**(1/4) * math.sqrt(2**n*math.factorial(n)*self.a0) ) * math.exp(-(self.x/self.a0)**2 / 2) # f(n)*g(x)
                            * cmath.exp(-1j*self.omega*(float(n)+1/2)*self.t) for n in range(N)] # h(t)
         hermite_coeffs = np.array(hermite_coeffs)
         return np.polynomial.hermite.hermval(x=(self.x/self.a0), c=hermite_coeffs)
+
+    def kick(self,p0,x=0):
+        return cmath.exp(-1j*p0*x/constants.hbar)
 
     ''' Dibuixem la ona en un rang de X i de T. Aprofitem que només hem de reescriure les línies i no els eixos i tota la resta de la figura
     per fer-ho de forma molt eficient amb blit.'''
@@ -69,7 +76,6 @@ class FuncioOna:
         '''Animació eficient. '''
         ani = animation.FuncAnimation(fig, animate, T,
                                       interval=100, blit=True, repeat=False)
-
         plt.show()
 
 '''Main per fer petites proves'''
@@ -77,6 +83,12 @@ if __name__ == '__main__':
     coeffs = np.array([1,1])
     coeffs = coeffs / np.linalg.norm(coeffs)
     estat = Estat(coeffs=coeffs, m=constants.m_e, k=1)
-    estat.ona.plot(x0=-5e-9,xf=5e-9,t0=0,tf=1,nx=100,nt=1000)
+    estat.ona.plot(x0=-5e-9,xf=5e-9,t0=0,tf=1,nx=1000,nt=20)
+
+    estat.kick(p0=1e-10)
+    estat.ona.plot(x0=-5e-9, xf=5e-9, t0=0, tf=1, nx=1000, nt=20)
+
+    estat.kick(p0=-1e-10)
+    estat.ona.plot(x0=-5e-9, xf=5e-9, t0=0, tf=1, nx=1000, nt=20)
 
     print('Sortida Correcta')
