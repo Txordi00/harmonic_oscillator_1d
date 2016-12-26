@@ -49,10 +49,12 @@ class FuncioOna:
         T = np.linspace(t0, tf, nt)
 
         fig, ax = plt.subplots()
-        linia_real, = ax.plot(X, Y.real, 'b', label='Real', animated=True)
-        linia_imag, = ax.plot(X, Y.imag, 'r', label='Imaginari', animated=True)
+        linia_real = ax.plot(X, Y.real, 'b', label='Real', animated=True)[0]
+        linia_imag = ax.plot(X, Y.imag, 'r', label='Imaginari', animated=True)[0]
         ax.set_xlim(np.min(X), np.max(X))
         ax.set_ylim(-100000, 100000)
+        handles, labels = ax.get_legend_handles_labels()
+        ax.legend(handles, labels)
         lines = [linia_real, linia_imag]
 
         def animate(t):
