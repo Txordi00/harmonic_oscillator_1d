@@ -9,7 +9,7 @@ import matplotlib.pylab as plt
 import matplotlib.animation as animation
 from matplotlib.legend_handler import HandlerLine2D
 
-INF = 1e6
+INF = 2e-8
 
 '''Energía per cada n'''
 def E_n(n, omega):
@@ -34,7 +34,7 @@ class Estat:
     def __init__(self, coeffs, m=constants.m_e, k=1):
         self.m = m
         self.k = k
-        self.coeffs = coeffs
+        self.coeffs = coeffs / np.linalg.norm(coeffs)
         '''Dintre d'estat guardem la funció d'ona.'''
         self.ona = FuncioOna(coeffs=self.coeffs,m=self.m,k=self.k)
 
@@ -75,7 +75,7 @@ class FuncioOna:
 
     '''Apliquem la Traslació.'''
     def eval(self,x,t):
-        '''De forma pura hauriem de aproximar l'operador de traslació tal que així:'''
+        '''De forma pura hauriem d'aproximar l'operador de traslació tal que així:'''
         # '''Defineixo aquesta funció auxiliar perquè només volem calcular la parcial respecte de x.'''
         # def fx(x):
         #     return self.eval1(x,t)
@@ -96,12 +96,13 @@ class FuncioOna:
         n=0
         coeffs_aux = []
         while (accum_prob<0.99):
-            # cn = integrate.quadrature(func=integrand_real,a=-INF,b=+INF,args=(n,),vec_func=False,tol=1e-18,rtol=1e-18)[0] + 1j*integrate.quadrature(func=integrand_imag,a=-INF,b=+INF,args=(n,),vec_func=False,tol=1e-18,rtol=1e-18)[0]
-            cn = integrate.quad(func=integrand_real, a=-np.inf, b=+np.inf, args=(n,))[0] + 1j * integrate.quad(func=integrand_imag, a=-np.inf, b=+np.inf, args=(n,))[0]
+            cn = integrate.romberg(function=integrand_real,a=-INF,b=+INF,args=(n,),vec_func=False,divmax=10) + 1j*integrate.romberg(function=integrand_imag,a=-INF,b=+INF,args=(n,),vec_func=False,divmax=5)
+            # cn = integrate.quad(func=integrand_real, a=-np.inf, b=+np.inf, args=(n,))[0] + 1j * integrate.quad(func=integrand_imag, a=-np.inf, b=+np.inf, args=(n,))[0]
             coeffs_aux = coeffs_aux + [cn]
             accum_prob = accum_prob + abs(cn)**2
             n = n + 1
-            print(str(n) + ' coeficients amb precissió ' + str(accum_prob))
+            # print('coeficient ' + str(n) + ', probabilitat acumulada: ' + str(accum_prob))
+        print(str(n) + ' coeficients amb precissió ' + str(accum_prob))
         self.coeffs = np.array(coeffs_aux)
 
 
@@ -110,47 +111,47 @@ class FuncioOna:
     def plot(self, x0=-5e-9, xf=5e-9, t0=0, tf=1, nx=100, nt=1000):
         '''Valors de les X i T i valors inicials de la funció d'ona Y.'''
         X = np.linspace(x0, xf, nx)
-        Y = np.array([self.eval(x=x, t=t0) for x in X])
         T = np.linspace(t0, tf, nt)
+        print('Calculant els valors de la funció de ona...')
+        Y = [np.array([self.eval(x=x, t=t) for x in X]) for t in T]
 
         '''Definició/Inicialització de tots els plots.'''
         fig, ax = plt.subplots()
-        linia_real = ax.plot(X, Y.real, 'b', label='Real', animated=True)[0]
-        linia_imag = ax.plot(X, Y.imag, 'r', label='Imaginari', animated=True)[0]
+        linia_real = ax.plot(X, Y[0].real, 'b', label='Real', animated=True)[0]
+        linia_imag = ax.plot(X, Y[0].imag, 'r', label='Imaginari', animated=True)[0]
         ax.set_xlim(np.min(X), np.max(X))
-        ylim = 1.25*np.max([abs(np.min(Y)), abs(np.max(Y))])
+        ylim = 1.25*np.max([abs(np.min(Y[0])), abs(np.max(Y[0]))])
         ax.set_ylim(-ylim, ylim)
         handles, labels = ax.get_legend_handles_labels()
         ax.legend(handles, labels)
         lines = [linia_real, linia_imag]
 
         '''Funció auxiliar per computar la animació. Avalua per cada temps la funció d'ona Y als X donats.'''
-        def animate(t):
-            Y = np.array([self.eval(x=x, t=t) for x in X])
-            lines[0].set_ydata(Y.real)
-            lines[1].set_ydata(Y.imag)
+        def animate(n):
+            # Y = np.array([self.eval(x=x, t=t) for x in X])
+            lines[0].set_ydata(Y[n].real)
+            lines[1].set_ydata(Y[n].imag)
             return lines
 
         '''Animació eficient. '''
-        ani = animation.FuncAnimation(fig, animate, T,
+        ani = animation.FuncAnimation(fig, animate, range(len(Y)),
                                       interval=100, blit=True, repeat=False)
         plt.show()
 
 '''Main per fer petites proves'''
 if __name__ == '__main__':
     coeffs = np.array([1,0])
-    coeffs = coeffs / np.linalg.norm(coeffs)
     estat = Estat(coeffs=coeffs, m=constants.m_e, k=1)
 
-    estat.ona.plot(x0=-5e-9,xf=5e-9,t0=0,tf=1,nx=1000,nt=20)
+    estat.ona.plot(x0=-5e-9,xf=5e-9,t0=0,tf=1,nx=480,nt=20)
 
     estat.kick(p0=1e-10)
-    estat.ona.plot(x0=-5e-9, xf=5e-9, t0=0, tf=1, nx=1000, nt=20)
+    estat.ona.plot(x0=-5e-9, xf=5e-9, t0=0, tf=1, nx=480, nt=20)
 
     estat.kick(p0=-1e-10)
-    estat.ona.plot(x0=-5e-9, xf=5e-9, t0=0, tf=1, nx=1000, nt=20)
+    estat.ona.plot(x0=-5e-9, xf=5e-9, t0=0, tf=1, nx=480, nt=20)
 
     estat.traslacio(x0=1e-9)
-    estat.ona.plot(x0=-5e-9, xf=5e-9, t0=0, tf=1, nx=1000, nt=20)
+    estat.ona.plot(x0=-5e-9, xf=5e-9, t0=0, tf=1, nx=480, nt=20)
 
     print('Sortida Correcta')
