@@ -2,6 +2,8 @@
 import math
 import cmath
 import numpy as np
+##TODO: Ficar sol scipy as sp
+import scipy as sp
 from scipy import constants
 from scipy import misc
 from scipy import integrate
@@ -9,15 +11,19 @@ import matplotlib.pylab as plt
 import matplotlib.animation as animation
 from matplotlib.legend_handler import HandlerLine2D
 
-INF = 2e-8
+##TODO: Si ens assegurem que integrate va bé, treure INF
+INF = 1e6
+HBAR = 1
+M = 1
+K = 1
 
 '''Energía per cada n'''
 def E_n(n, omega):
-    return constants.hbar * omega * (float(n) + 1/2)
+    return HBAR * omega * (float(n) + 1/2)
 
 '''Part temporal de la solució de l'equació d'Schrodinger depenent del temps.'''
 def exp_t(E_n,t):
-    return cmath.exp(-1j*E_n*t/constants.hbar)
+    return cmath.exp(-1j*E_n*t/HBAR)
 
 '''Solucions estàcionaries de l'equació d'Schrodinger.'''
 def phi_n(x, n, a0):
@@ -31,7 +37,7 @@ def phi_n(x, n, a0):
 ''' Classe Estat. Aquí emmagatzemo tota la informació rellevant del estat. Gran part de la funcionalitat es subordinarà
  a altres classes/funcions. '''
 class Estat:
-    def __init__(self, coeffs, m=constants.m_e, k=1):
+    def __init__(self, coeffs, m=M, k=K):
         self.m = m
         self.k = k
         self.coeffs = coeffs / np.linalg.norm(coeffs)
@@ -56,22 +62,22 @@ class Estat:
  i les constants a0 i omega. '''
 class FuncioOna:
     ''' Inicialització de la classe. Guardem les constants i els coeficients cn. '''
-    def __init__(self,coeffs, m=1, k=1, x0=0, p0=0):
+    def __init__(self,coeffs, m=M, k=K, x0=0, p0=0):
         self.coeffs = coeffs
         self.x0 = x0
         self.p0 = p0
         self.omega = math.sqrt(k/m)
-        self.a0 = math.sqrt(constants.hbar/(m*self.omega))
+        self.a0 = math.sqrt(HBAR/(m*self.omega))
 
     ''' Funcionalitat Important. Avaluem la ona als diferents punts (sense fer ni kick ni translació).'''
     def eval0(self,x,t):
         N = np.size(self.coeffs)
 
-        return np.sum([self.coeffs[n]*phi_n(x=x,n=n,a0=self.a0) * exp_t(E_n=E_n(n,self.omega),t=t) for n in range(N)])
+        return np.sum(np.array([self.coeffs[n]*phi_n(x=x,n=n,a0=self.a0) * exp_t(E_n=E_n(n,self.omega),t=t) for n in range(N)]))
 
     '''Apliquem el Kick.'''
     def eval1(self,x,t):
-        return cmath.exp(-1j*self.p0*x/constants.hbar) * self.eval0(x,t)
+        return cmath.exp(-1j*self.p0*x/HBAR) * self.eval0(x,t)
 
     '''Apliquem la Traslació.'''
     def eval(self,x,t):
@@ -83,7 +89,7 @@ class FuncioOna:
         #   en un cas real hauriem de aproximar amb més graus.'''
         # return fx(x) - self.x0*misc.derivative(fx,x,dx=1e-18)
         '''Però, com que sabem que U(x0)*f(x,t) = f(x-x0,t):'''
-        return self.eval1(float(x)-self.x0,t)
+        return self.eval1(x-self.x0,t)
 
     '''Actualitzem els coeficients calculant la integral de phi_n'(x)*ona(x,0).'''
     def update_coeffs(self):
@@ -96,8 +102,9 @@ class FuncioOna:
         n=0
         coeffs_aux = []
         while (accum_prob<0.99):
-            cn = integrate.romberg(function=integrand_real,a=-INF,b=+INF,args=(n,),vec_func=False,divmax=10) + 1j*integrate.romberg(function=integrand_imag,a=-INF,b=+INF,args=(n,),vec_func=False,divmax=5)
-            # cn = integrate.quad(func=integrand_real, a=-np.inf, b=+np.inf, args=(n,))[0] + 1j * integrate.quad(func=integrand_imag, a=-np.inf, b=+np.inf, args=(n,))[0]
+            # cn = integrate.romberg(function=integrand_real,a=-INF,b=+INF,args=(n,),vec_func=False,divmax=10) + 1j*integrate.romberg(function=integrand_imag,a=-INF,b=+INF,args=(n,),vec_func=False,divmax=5)
+            cn = integrate.quad(func=integrand_real, a=-np.inf, b=+np.inf, args=(n,))[0] + 1j * integrate.quad(func=integrand_imag, a=-np.inf, b=+np.inf, args=(n,))[0]
+            print(cn)
             coeffs_aux = coeffs_aux + [cn]
             accum_prob = accum_prob + abs(cn)**2
             n = n + 1
@@ -141,17 +148,20 @@ class FuncioOna:
 '''Main per fer petites proves'''
 if __name__ == '__main__':
     coeffs = np.array([1,0])
-    estat = Estat(coeffs=coeffs, m=constants.m_e, k=1)
+    estat = Estat(coeffs=coeffs, m=M, k=1)
 
-    estat.ona.plot(x0=-5e-9,xf=5e-9,t0=0,tf=1,nx=480,nt=20)
+    estat.ona.plot(x0=-10,xf=10,t0=0,tf=10,nx=480,nt=100)
+    ##TODO: Algo va malament i tant la ona com les funcions pròpies no ténen area 1.
+    I = integrate.quad(func=phi_n, a=-np.inf, b=+np.inf, args=(0,1))[0]
+    print('Àrea ona: ' + str(abs(I)**2))
 
-    estat.kick(p0=1e-10)
-    estat.ona.plot(x0=-5e-9, xf=5e-9, t0=0, tf=1, nx=480, nt=20)
+    estat.kick(p0=1)
+    estat.ona.plot(x0=-10, xf=10, t0=0, tf=10, nx=480, nt=100)
 
-    estat.kick(p0=-1e-10)
-    estat.ona.plot(x0=-5e-9, xf=5e-9, t0=0, tf=1, nx=480, nt=20)
+    estat.kick(p0=-1)
+    estat.ona.plot(x0=-10, xf=10, t0=0, tf=10, nx=480, nt=100)
 
-    estat.traslacio(x0=1e-9)
-    estat.ona.plot(x0=-5e-9, xf=5e-9, t0=0, tf=1, nx=480, nt=20)
+    estat.traslacio(x0=1)
+    estat.ona.plot(x0=-10, xf=10, t0=0, tf=10, nx=480, nt=100)
 
     print('Sortida Correcta')
