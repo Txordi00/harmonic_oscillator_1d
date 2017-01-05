@@ -29,7 +29,7 @@ def exp_t(E_n,t):
 def phi_n(x, n, a0):
     coeff = np.zeros((n+1,))
     coeff[n] = 1
-    fn = 1/( math.pi**(1/4) * math.sqrt(2**n*math.factorial(n)*a0) )
+    fn = 1/( math.pi**(1./4.) * math.sqrt(2**n*math.factorial(n)*a0) )
     xbar = x/a0
     fx = math.exp(-xbar**2/2) * np.polynomial.hermite.hermval(x=xbar, c=coeff)
     return fn * fx
@@ -104,7 +104,6 @@ class FuncioOna:
         while (accum_prob<0.99):
             # cn = integrate.romberg(function=integrand_real,a=-INF,b=+INF,args=(n,),vec_func=False,divmax=10) + 1j*integrate.romberg(function=integrand_imag,a=-INF,b=+INF,args=(n,),vec_func=False,divmax=5)
             cn = integrate.quad(func=integrand_real, a=-np.inf, b=+np.inf, args=(n,))[0] + 1j * integrate.quad(func=integrand_imag, a=-np.inf, b=+np.inf, args=(n,))[0]
-            print(cn)
             coeffs_aux = coeffs_aux + [cn]
             accum_prob = accum_prob + abs(cn)**2
             n = n + 1
@@ -150,15 +149,20 @@ if __name__ == '__main__':
     coeffs = np.array([1,0])
     estat = Estat(coeffs=coeffs, m=M, k=1)
 
-    estat.ona.plot(x0=-10,xf=10,t0=0,tf=10,nx=480,nt=100)
-    ##TODO: Algo va malament i tant la ona com les funcions pròpies no ténen area 1.
-    I = integrate.quad(func=phi_n, a=-np.inf, b=+np.inf, args=(0,1))[0]
-    print('Àrea ona: ' + str(abs(I)**2))
+    # int_phi = lambda x, n, a0: abs(phi_n(x=x,n=n,a0=a0))**2
+    # int_ona = lambda x: abs(estat.ona.eval(x=x,t=0))**2
+    # I_phi = integrate.quad(func=int_phi, a=-np.inf, b=+np.inf, args=(0,1))[0]
+    # print('Àrea phi: ' + str(abs(I_phi)**2))
+    # I_ona = integrate.quad(func=int_ona, a=-np.inf, b=+np.inf)[0]
+    # print('Àrea ona: ' + str(abs(I_ona)**2))
 
-    estat.kick(p0=1)
+    estat.ona.plot(x0=-10,xf=10,t0=0,tf=10,nx=480,nt=100)
+
+
+    estat.kick(p0=1.)
     estat.ona.plot(x0=-10, xf=10, t0=0, tf=10, nx=480, nt=100)
 
-    estat.kick(p0=-1)
+    estat.kick(p0=-1.)
     estat.ona.plot(x0=-10, xf=10, t0=0, tf=10, nx=480, nt=100)
 
     estat.traslacio(x0=1)
