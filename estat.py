@@ -121,6 +121,7 @@ class FuncioOna:
         print('Calculant els valors de la funció de ona...')
         Y = [np.array([self.eval(x=x, t=t) for x in X]) for t in T]
 
+        ##TODO: Mostrar la corba de potencial V(x) = 1/2*k*x
         '''Definició/Inicialització de tots els plots.'''
         fig, ax = plt.subplots()
         linia_real = ax.plot(X, Y[0].real, 'b', label='Real', animated=True)[0]
@@ -146,7 +147,7 @@ class FuncioOna:
 
 '''Main per fer petites proves'''
 if __name__ == '__main__':
-    coeffs = np.array([1,0])
+    coeffs = np.array([1])
     estat = Estat(coeffs=coeffs, m=M, k=1)
 
     # int_phi = lambda x, n, a0: abs(phi_n(x=x,n=n,a0=a0))**2
@@ -159,10 +160,10 @@ if __name__ == '__main__':
     estat.ona.plot(x0=-10,xf=10,t0=0,tf=10,nx=480,nt=100)
 
 
-    estat.kick(p0=1.)
+    estat.kick(p0=8)
     estat.ona.plot(x0=-10, xf=10, t0=0, tf=10, nx=480, nt=100)
 
-    estat.kick(p0=-1.)
+    estat.kick(p0=-8)
     estat.ona.plot(x0=-10, xf=10, t0=0, tf=10, nx=480, nt=100)
 
     estat.traslacio(x0=1)
