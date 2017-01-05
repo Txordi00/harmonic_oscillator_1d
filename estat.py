@@ -2,17 +2,12 @@
 import math
 import cmath
 import numpy as np
-##TODO: Ficar sol scipy as sp
-import scipy as sp
-from scipy import constants
-from scipy import misc
+##TODO: Arreglar import scipy as sp
+# from scipy import constants
 from scipy import integrate
 import matplotlib.pylab as plt
 import matplotlib.animation as animation
-from matplotlib.legend_handler import HandlerLine2D
 
-##TODO: Si ens assegurem que integrate va bé, treure INF
-INF = 1e6
 HBAR = 1
 M = 1
 K = 1
@@ -66,6 +61,8 @@ class FuncioOna:
         self.coeffs = coeffs
         self.x0 = x0
         self.p0 = p0
+        self.m = m
+        self.k = k
         self.omega = math.sqrt(k/m)
         self.a0 = math.sqrt(HBAR/(m*self.omega))
 
@@ -87,7 +84,7 @@ class FuncioOna:
         #     return self.eval1(x,t)
         # '''Aproximació Taylor de grau 1 de U(x0)*f(x,t) = exp(-i*x0*p/hbar)*f(x,t). Això sol serveix per x molt petites,
         #   en un cas real hauriem de aproximar amb més graus.'''
-        # return fx(x) - self.x0*misc.derivative(fx,x,dx=1e-18)
+        # return fx(x) - self.x0*sp.misc.derivative(fx,x,dx=1e-18)
         '''Però, com que sabem que U(x0)*f(x,t) = f(x-x0,t):'''
         return self.eval1(x-self.x0,t)
 
@@ -118,20 +115,22 @@ class FuncioOna:
         '''Valors de les X i T i valors inicials de la funció d'ona Y.'''
         X = np.linspace(x0, xf, nx)
         T = np.linspace(t0, tf, nt)
+        V = 1./2.*self.k*X**2
         print('Calculant els valors de la funció de ona...')
         Y = [np.array([self.eval(x=x, t=t) for x in X]) for t in T]
 
-        ##TODO: Mostrar la corba de potencial V(x) = 1/2*k*x
         '''Definició/Inicialització de tots els plots.'''
         fig, ax = plt.subplots()
-        linia_real = ax.plot(X, Y[0].real, 'b', label='Real', animated=True)[0]
-        linia_imag = ax.plot(X, Y[0].imag, 'r', label='Imaginari', animated=True)[0]
         ax.set_xlim(np.min(X), np.max(X))
         ylim = 1.25*np.max([abs(np.min(Y[0])), abs(np.max(Y[0]))])
         ax.set_ylim(-ylim, ylim)
+
+        linia_real = ax.plot(X, Y[0].real, 'b', label='Re[Ona]', animated=True)[0]
+        linia_imag = ax.plot(X, Y[0].imag, 'r', label='Im[Ona]', animated=True)[0]
+        linia_pot = ax.plot(X, V-ylim, 'g', label='Potencial', animated=True)[0]
         handles, labels = ax.get_legend_handles_labels()
         ax.legend(handles, labels)
-        lines = [linia_real, linia_imag]
+        lines = [linia_real, linia_imag, linia_pot]
 
         '''Funció auxiliar per computar la animació. Avalua per cada temps la funció d'ona Y als X donats.'''
         def animate(n):
@@ -147,6 +146,13 @@ class FuncioOna:
 
 '''Main per fer petites proves'''
 if __name__ == '__main__':
+    x0 = -10
+    xf = 10
+    t0 = 0
+    tf = 10
+    nx = 480
+    nt = 100
+
     coeffs = np.array([1])
     estat = Estat(coeffs=coeffs, m=M, k=1)
 
@@ -157,16 +163,16 @@ if __name__ == '__main__':
     # I_ona = integrate.quad(func=int_ona, a=-np.inf, b=+np.inf)[0]
     # print('Àrea ona: ' + str(abs(I_ona)**2))
 
-    estat.ona.plot(x0=-10,xf=10,t0=0,tf=10,nx=480,nt=100)
+    estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
 
 
     estat.kick(p0=8)
-    estat.ona.plot(x0=-10, xf=10, t0=0, tf=10, nx=480, nt=100)
+    estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
 
     estat.kick(p0=-8)
-    estat.ona.plot(x0=-10, xf=10, t0=0, tf=10, nx=480, nt=100)
+    estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
 
     estat.traslacio(x0=1)
-    estat.ona.plot(x0=-10, xf=10, t0=0, tf=10, nx=480, nt=100)
+    estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
 
     print('Sortida Correcta')
