@@ -7,6 +7,7 @@ from scipy import integrate
 from scipy.misc import derivative
 import matplotlib.pylab as plt
 import matplotlib.animation as animation
+from matplotlib.patches import Ellipse
 import sys
 from funcions_extra import *
 
@@ -115,8 +116,8 @@ class FuncioOna:
         func_prob = lambda x, t: abs(self.eval(x,t))**2
         func_x = lambda x,t: func_prob(x,t)*x
         func_x2 = lambda x,t: func_prob(x,t)*x**2
-        func_p = lambda x,t: np.conj(self.eval(x,t)) * HBAR/1j * derivative(func=self.eval,x0=x,dx=1e-2,n=1,args=(t,))
-        func_p2 = lambda x,t: np.conj(self.eval(x,t)) * (-HBAR**2) * derivative(func=self.eval,x0=x,dx=1e-2,n=2,args=(t,))
+        func_p = lambda x,t: (np.conj(self.eval(x,t)) * HBAR/1j * derivative(func=self.eval,x0=x,dx=1e-2,n=1,args=(t,))).real
+        func_p2 = lambda x,t: (np.conj(self.eval(x,t)) * (-HBAR**2) * derivative(func=self.eval,x0=x,dx=1e-2,n=2,args=(t,))).real
 
         if(operator.lower()=='x'):
             return integrate.quad(func=func_x, a=-np.inf, b=+np.inf, args=(t,))[0]
@@ -149,17 +150,16 @@ class FuncioOna:
         ylim = 1.25*np.max([abs(np.min(Y[0])), abs(np.max(Y[0]))])
         ax.set_ylim(-ylim, ylim)
 
-        linia_real = ax.plot(X, Y[0].real, 'b', label='Re[Ona]', animated=True)[0]
-        linia_imag = ax.plot(X, Y[0].imag, 'r', label='Im[Ona]', animated=True)[0]
-        linia_prob = ax.plot(X, abs(Y[0])**2, 'y', label='Prob', animated=True)[0]
-        linia_exp = ax.plot([EXP_VAL[0],EXP_VAL[0]], [-ylim,ylim], 'k', label='Exp_val', animated=True)[0]
-        # linia_std, bottoms_tops, _ = ax.errorbar(EXP_VAL[0], ylim/4., xerr=STD[0], yerr=0, label='Std', animated=True)
-        errobj = ax.errorbar(EXP_VAL[0], ylim/4., color='k', xerr=STD[0], yerr=0, label='Std', animated=True)
-        # linia_err = errobj[0]
-        linia_pot = ax.plot(X, V-ylim, 'g', label='Potencial', animated=False)[0]
+        linia_real = ax.plot(X, Y[0].real, 'b', label=r'$Re[\psi(x,t)]$', animated=True)[0]
+        linia_imag = ax.plot(X, Y[0].imag, 'r', label=r'$Im[\psi(x,t)]$', animated=True)[0]
+        linia_prob = ax.plot(X, abs(Y[0])**2, 'y', label=r'$|\psi(x,t)|^2$', animated=True)[0]
+        linia_exp = ax.plot([EXP_VAL[0],EXP_VAL[0]], [-ylim,ylim], 'k', label=r'$\langle x \rangle_\psi(t)$', animated=True)[0]
+        errobj = ax.errorbar(EXP_VAL[0], ylim/4., color='k', xerr=STD[0], yerr=0, label=r'$\Delta x(t)$', animated=True)
+        linia_pot = ax.plot(X, V-ylim, 'g', label=r'$V(x)$', animated=False)[0]
         handles, labels = ax.get_legend_handles_labels()
         ax.legend(handles, labels)
         lines = [linia_real, linia_imag, linia_prob, linia_exp, linia_pot]
+
 
         '''Funció auxiliar per computar la animació. Avalua per cada temps la funció d'ona Y als X donats.'''
         def animate(n):
@@ -175,6 +175,41 @@ class FuncioOna:
         ani = animation.FuncAnimation(fig, animate, range(len(T)),
                                       interval=100, blit=True, repeat=False)
         plt.show()
+
+    def plot_xp(self, t0=0, tf=10, nt=100):
+        '''Valors de les X i T i valors inicials de la funció d'ona Y.'''
+        T = np.linspace(t0, tf, nt)
+        print('Calculant els valors esperats...')
+        EXP_VAL_X = np.array([self.expected_value(operator='x', t=t) for t in T]) / (math.sqrt(self.m*self.omega))
+        STD_X = np.sqrt(np.array([self.expected_value(operator='x2', t=t) for t in T]) - EXP_VAL_X ** 2) / (math.sqrt(self.m*self.omega))
+        EXP_VAL_P = np.array([self.expected_value(operator='p', t=t) for t in T]) * (math.sqrt(self.m*self.omega))
+        STD_P = np.sqrt(np.array([self.expected_value(operator='p2', t=t) for t in T]) - EXP_VAL_P ** 2) * (math.sqrt(self.m*self.omega))
+
+        '''Definició/Inicialització de tots els plots.'''
+        fig, ax = plt.subplots()
+        xlim = max(abs(np.min(EXP_VAL_X-STD_X)), abs(np.max(EXP_VAL_X+STD_X)))*1.25
+        ylim = max(abs(np.min(EXP_VAL_P-STD_P)), abs(np.max(EXP_VAL_P+STD_P)))*1.25
+        ax.set_xlim(-xlim, xlim)
+        ax.set_ylim(-ylim, ylim)
+
+        # linia_std, bottoms_tops, _ = ax.errorbar(EXP_VAL[0], ylim/4., xerr=STD[0], yerr=0, label='Std', animated=True)
+        errobj = ax.errorbar(EXP_VAL_X[0], EXP_VAL_P[0], color='r', xerr=STD_X[0], yerr=STD_P[0], label=r'$(\Delta x(t),\Delta p(t))$',
+                             animated=True)
+        handles, labels = ax.get_legend_handles_labels()
+        ax.legend(handles, labels)
+
+        '''Funció auxiliar per computar la animació. Avalua per cada temps la funció d'ona Y als X donats.'''
+        def animate(n):
+            patch = [ax.add_patch(Ellipse(xy=(EXP_VAL_X[n],EXP_VAL_P[n]), width=2.*STD_X[n], height=2.*STD_P[n], color='c', alpha=0.5))]
+            lines_err = adjust_err_bar(errobj=errobj,x=EXP_VAL_X[n],y=EXP_VAL_P[n],x_error=STD_X[n],y_error=STD_P[n])
+            return lines_err + patch
+
+        '''Animació eficient.'''
+        ani = animation.FuncAnimation(fig, animate, range(len(T)),
+                                      interval=100, blit=True, repeat=False)
+        plt.show()
+
+
 
 '''Main per fer petites proves'''
 if __name__ == '__main__':
@@ -196,13 +231,15 @@ if __name__ == '__main__':
     # print('Àrea ona: ' + str(abs(I_ona)**2))
 
     estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
+    estat.ona.plot_xp(t0=t0,tf=tf,nt=nt)
 
     estat.traslacio(x0=1)
     estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
-
+    estat.ona.plot_xp(t0=t0, tf=tf, nt=nt)
 
     estat.kick(p0=2)
     estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
+    estat.ona.plot_xp(t0=t0, tf=tf, nt=nt)
     #
     # estat.kick(p0=-8)
     # estat.ona.plot(x0=x0,xf=xf,t0=tf+t0,tf=tf+tf,nx=nx,nt=nt)

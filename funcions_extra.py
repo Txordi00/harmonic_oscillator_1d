@@ -14,11 +14,12 @@ def adjust_err_bar(errobj, x, y, x_error, y_error):
     else:
         y_base = y
 
+    ln.set_data(x_base, y_base)
+
     xerr_top = x_base + x_error
     xerr_bot = x_base - x_error
     yerr_top = y_base + y_error
     yerr_bot = y_base - y_error
-    ln.set_data([xerr_bot, xerr_top], [yerr_bot, yerr_top])
 
     errx_top.set_xdata(xerr_top)
     errx_bot.set_xdata(xerr_bot)
