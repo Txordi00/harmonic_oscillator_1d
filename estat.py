@@ -141,35 +141,59 @@ class FuncioOna:
         V = 1./2.*self.k*X**2
         print('Calculant els valors de la funció de ona...')
         Y = [np.array([self.eval(x=x, t=t) for x in X]) for t in T]
-        EXP_VAL = np.array([self.expected_value(operator='x',t=t) for t in T])
-        STD = np.sqrt(np.array([self.expected_value(operator='x2',t=t) for t in T]) - EXP_VAL**2)
+        EXP_VAL_X = np.array([self.expected_value(operator='x', t=t) for t in T]) / (math.sqrt(self.m*self.omega))
+        STD_X = np.sqrt(np.array([self.expected_value(operator='x2', t=t) for t in T]) - EXP_VAL_X ** 2) / (math.sqrt(self.m*self.omega))
+        EXP_VAL_P = np.array([self.expected_value(operator='p', t=t) for t in T]) * (math.sqrt(self.m*self.omega))
+        STD_P = np.sqrt(np.array([self.expected_value(operator='p2', t=t) for t in T]) - EXP_VAL_P ** 2) * (math.sqrt(self.m*self.omega))
 
-        '''Definició/Inicialització de tots els plots.'''
-        fig, ax = plt.subplots()
-        ax.set_xlim(np.min(X), np.max(X))
+        '''Definició/Inicialització de tots els plots a les 2 differents subfigures. 1a: Plot XY, 2a: Plot XP.'''
+        fig, (ax1, ax2) = plt.subplots(nrows=1,ncols=2)
+        fig.set_size_inches(w=17,h=16./9.*17,forward=True)
+        ax1.set_xlim(np.min(X), np.max(X))
         ylim = 1.25*np.max([abs(np.min(Y[0])), abs(np.max(Y[0]))])
-        ax.set_ylim(-ylim, ylim)
+        ax1.set_ylim(-ylim, ylim)
 
-        linia_real = ax.plot(X, Y[0].real, 'b', label=r'$Re[\psi(x,t)]$', animated=True)[0]
-        linia_imag = ax.plot(X, Y[0].imag, 'r', label=r'$Im[\psi(x,t)]$', animated=True)[0]
-        linia_prob = ax.plot(X, abs(Y[0])**2, 'y', label=r'$|\psi(x,t)|^2$', animated=True)[0]
-        linia_exp = ax.plot([EXP_VAL[0],EXP_VAL[0]], [-ylim,ylim], 'k', label=r'$\langle x \rangle_\psi(t)$', animated=True)[0]
-        errobj = ax.errorbar(EXP_VAL[0], ylim/4., color='k', xerr=STD[0], yerr=0, label=r'$\Delta x(t)$', animated=True)
-        linia_pot = ax.plot(X, V-ylim, 'g', label=r'$V(x)$', animated=False)[0]
-        handles, labels = ax.get_legend_handles_labels()
-        ax.legend(handles, labels)
+        '''Inicialització plot XY'''
+        ax1.grid(True, which='both')
+        linia_real = ax1.plot(X, Y[0].real, 'b', label=r'$Re[\psi(x,t)]$', animated=True)[0]
+        linia_imag = ax1.plot(X, Y[0].imag, 'r', label=r'$Im[\psi(x,t)]$', animated=True)[0]
+        linia_prob = ax1.plot(X, abs(Y[0])**2, 'y', label=r'$|\psi(x,t)|^2$', animated=True)[0]
+        linia_exp = ax1.plot([EXP_VAL_X[0],EXP_VAL_X[0]], [-ylim,ylim], 'k', label=r'$\langle x \rangle_\psi(t)$', animated=True)[0]
+        errobj = ax1.errorbar(EXP_VAL_X[0], ylim/4., color='k', xerr=STD_X[0], yerr=0, label=r'$\Delta x(t)$', animated=True)
+        linia_pot = ax1.plot(X, V-ylim, 'g', label=r'$V(x)$', animated=False)[0]
+        handles, labels = ax1.get_legend_handles_labels()
+        ax1.legend(handles, labels)
         lines = [linia_real, linia_imag, linia_prob, linia_exp, linia_pot]
+        '''Inicialització plot XP'''
+        ax2.grid(True, which='both')
+        ax2.axhline(y=0, color='k')
+        ax2.axvline(x=0, color='k')
+        xlim_xp = max(abs(np.min(EXP_VAL_X-STD_X)), abs(np.max(EXP_VAL_X+STD_X)))*1.25
+        ylim_xp = max(abs(np.min(EXP_VAL_P-STD_P)), abs(np.max(EXP_VAL_P+STD_P)))*1.25
+        ax2.set_xlim(-xlim_xp, xlim_xp)
+        ax2.set_ylim(-ylim_xp, ylim_xp)
+        errobj_xp = ax2.errorbar(EXP_VAL_X[0], EXP_VAL_P[0], color='r', xerr=STD_X[0], yerr=STD_P[0],
+                             label=r'$(\Delta x(t),\Delta p(t))$',
+                             animated=True)
+        handles, labels = ax2.get_legend_handles_labels()
+        ax2.legend(handles, labels)
 
 
-        '''Funció auxiliar per computar la animació. Avalua per cada temps la funció d'ona Y als X donats.'''
+
+        '''Funció auxiliar per computar la animació. Avalua per cada temps T la funció d'ona Y als X donats,
+        el seu modul al quadrat, els valors esperats i std al plot XY i al XP....'''
         def animate(n):
-            # Y = np.array([self.eval(x=x, t=t) for x in X])
+            '''Plot XY'''
             lines[0].set_ydata(Y[n].real)
             lines[1].set_ydata(Y[n].imag)
             lines[2].set_ydata(abs(Y[n])**2)
-            lines[3].set_xdata([EXP_VAL[n],EXP_VAL[n]])
-            lines_err = adjust_err_bar(errobj=errobj,x=EXP_VAL[n],y=ylim/4.,x_error=STD[n],y_error=0)
-            return lines + lines_err
+            lines[3].set_xdata([EXP_VAL_X[n],EXP_VAL_X[n]])
+            lines_err = adjust_err_bar(errobj=errobj,x=EXP_VAL_X[n],y=ylim/4.,x_error=STD_X[n],y_error=0)
+            '''Plot XP'''
+            patch = [ax2.add_patch(Ellipse(xy=(EXP_VAL_X[n],EXP_VAL_P[n]), width=2.*STD_X[n], height=2.*STD_P[n], color='c', alpha=0.5))]
+            lines_err_xp = adjust_err_bar(errobj=errobj_xp,x=EXP_VAL_X[n],y=EXP_VAL_P[n],x_error=STD_X[n],y_error=STD_P[n])
+
+            return lines + lines_err + patch + lines_err_xp
 
         '''Animació eficient.'''
         ani = animation.FuncAnimation(fig, animate, range(len(T)),
@@ -231,15 +255,15 @@ if __name__ == '__main__':
     # print('Àrea ona: ' + str(abs(I_ona)**2))
 
     estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
-    estat.ona.plot_xp(t0=t0,tf=tf,nt=nt)
+    # estat.ona.plot_xp(t0=t0,tf=tf,nt=nt)
 
     estat.traslacio(x0=1)
     estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
-    estat.ona.plot_xp(t0=t0, tf=tf, nt=nt)
+    # estat.ona.plot_xp(t0=t0, tf=tf, nt=nt)
 
     estat.kick(p0=2)
     estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
-    estat.ona.plot_xp(t0=t0, tf=tf, nt=nt)
+    # estat.ona.plot_xp(t0=t0, tf=tf, nt=nt)
     #
     # estat.kick(p0=-8)
     # estat.ona.plot(x0=x0,xf=xf,t0=tf+t0,tf=tf+tf,nx=nx,nt=nt)
