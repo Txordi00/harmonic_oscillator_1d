@@ -200,39 +200,6 @@ class FuncioOna:
                                       interval=100, blit=True, repeat=False)
         plt.show()
 
-    def plot_xp(self, t0=0, tf=10, nt=100):
-        '''Valors de les X i T i valors inicials de la funció d'ona Y.'''
-        T = np.linspace(t0, tf, nt)
-        print('Calculant els valors esperats...')
-        EXP_VAL_X = np.array([self.expected_value(operator='x', t=t) for t in T]) / (math.sqrt(self.m*self.omega))
-        STD_X = np.sqrt(np.array([self.expected_value(operator='x2', t=t) for t in T]) - EXP_VAL_X ** 2) / (math.sqrt(self.m*self.omega))
-        EXP_VAL_P = np.array([self.expected_value(operator='p', t=t) for t in T]) * (math.sqrt(self.m*self.omega))
-        STD_P = np.sqrt(np.array([self.expected_value(operator='p2', t=t) for t in T]) - EXP_VAL_P ** 2) * (math.sqrt(self.m*self.omega))
-
-        '''Definició/Inicialització de tots els plots.'''
-        fig, ax = plt.subplots()
-        xlim = max(abs(np.min(EXP_VAL_X-STD_X)), abs(np.max(EXP_VAL_X+STD_X)))*1.25
-        ylim = max(abs(np.min(EXP_VAL_P-STD_P)), abs(np.max(EXP_VAL_P+STD_P)))*1.25
-        ax.set_xlim(-xlim, xlim)
-        ax.set_ylim(-ylim, ylim)
-
-        # linia_std, bottoms_tops, _ = ax.errorbar(EXP_VAL[0], ylim/4., xerr=STD[0], yerr=0, label='Std', animated=True)
-        errobj = ax.errorbar(EXP_VAL_X[0], EXP_VAL_P[0], color='r', xerr=STD_X[0], yerr=STD_P[0], label=r'$(\Delta x(t),\Delta p(t))$',
-                             animated=True)
-        handles, labels = ax.get_legend_handles_labels()
-        ax.legend(handles, labels)
-
-        '''Funció auxiliar per computar la animació. Avalua per cada temps la funció d'ona Y als X donats.'''
-        def animate(n):
-            patch = [ax.add_patch(Ellipse(xy=(EXP_VAL_X[n],EXP_VAL_P[n]), width=2.*STD_X[n], height=2.*STD_P[n], color='c', alpha=0.5))]
-            lines_err = adjust_err_bar(errobj=errobj,x=EXP_VAL_X[n],y=EXP_VAL_P[n],x_error=STD_X[n],y_error=STD_P[n])
-            return lines_err + patch
-
-        '''Animació eficient.'''
-        ani = animation.FuncAnimation(fig, animate, range(len(T)),
-                                      interval=100, blit=True, repeat=False)
-        plt.show()
-
 
 
 '''Main per fer petites proves'''
