@@ -41,21 +41,19 @@ def adjust_err_bar(errobj, x, y, x_error, y_error):
     barsy.set_segments(new_segments_y)
     return [ln, errx_top, errx_bot, erry_top, erry_bot, barsx, barsy]
 
-'''Funció per mostrar progressos de còmput.'''
-def print_progress(iteration, total, prefix = '', suffix = '', decimals = 1, barLength = 100, fill = '█'):
-    """
-    Call in a loop to create terminal progress bar
-    @params:
-        iteration   - Required  : current iteration (Int)
-        total       - Required  : total iterations (Int)
-        prefix      - Optional  : prefix string (Str)
-        suffix      - Optional  : suffix string (Str)
-        decimals    - Optional  : positive number of decimals in percent complete (Int)
-        barLength   - Optional  : character length of bar (Int)
-    """
+'''Funció per mostrar progressos de còmput en una sola línia de terminal.'''
+def print_progress(iteration, total, prefix = '', suffix = '', decimals = 1, bar_length = 100, fill = '█'):
+    '''
+        iteration   : Iteració actual (int)
+        total       : Total iteracions (int)
+        prefix      : Frase per mostrar abans (str)
+        suffix      : Frase per mostrar després (str)
+        decimals    : Nombre de decimals (int)
+        bar_length   : Longitud de la barra (int)
+    '''
     percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
-    filledLength = int(barLength * iteration // total)
-    bar = fill * filledLength + '-' * (barLength - filledLength)
+    filled_length = int(bar_length * iteration // total)
+    bar = fill * filled_length + '-' * (bar_length - filled_length)
     sys.stdout.write('\r%s |%s| %s%s %s' % (prefix, bar, percent, '%', suffix)),
     if iteration == total:
         sys.stdout.write('\n')
@@ -71,22 +69,22 @@ def plot_ehrenfest(estat, t0=0,tf=10, nt=100):
 
     prefix = '[Ehrenfest] Calculant valors esperats i derivades:'
     sufix = 'Acabat'
-    print_progress(0, 5, prefix=prefix, suffix=sufix, barLength=50)
+    print_progress(0, 5, prefix=prefix, suffix=sufix, bar_length=50)
 
     X = np.array([estat.valor_esperat(t=t,operator='x') for t in T])
-    print_progress(1, 5, prefix=prefix, suffix=sufix, barLength=50)
+    print_progress(1, 5, prefix=prefix, suffix=sufix, bar_length=50)
 
     V = np.array([-derivative(func=potential, x0=x,dx=1e-2,n=1) for x in X])
-    print_progress(2, 5, prefix=prefix, suffix=sufix, barLength=50)
+    print_progress(2, 5, prefix=prefix, suffix=sufix, bar_length=50)
 
     P = np.array([estat.valor_esperat(t=t,operator='p') for t in T])
-    print_progress(3, 5, prefix=prefix, suffix=sufix, barLength=50)
+    print_progress(3, 5, prefix=prefix, suffix=sufix, bar_length=50)
 
     DX = m*np.array([derivative(func=estat.valor_esperat, x0=t, dx=1e-2, n=1, args=('x',)) for t in T])
-    print_progress(4, 5, prefix=prefix, suffix=sufix, barLength=50)
+    print_progress(4, 5, prefix=prefix, suffix=sufix, bar_length=50)
 
     DP = np.array([derivative(func=estat.valor_esperat, x0=t, dx=1e-2, n=1, args=('p',)) for t in T])
-    print_progress(5, 5, prefix=prefix, suffix=sufix, barLength=50)
+    print_progress(5, 5, prefix=prefix, suffix=sufix, bar_length=50)
 
     fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2)
     fig.set_size_inches(w=17, h=16. / 9. * 17, forward=True)

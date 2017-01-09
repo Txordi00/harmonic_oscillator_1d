@@ -161,22 +161,22 @@ class FuncioOna:
         V = 1./2.*self.k*X**2
         prefix = '[Funció Ona] Calculant valors:'
         sufix = 'Acabat'
-        print_progress(0, 5, prefix=prefix, suffix=sufix, barLength=50)
+        print_progress(0, 5, prefix=prefix, suffix=sufix, bar_length=50)
 
         Y = [np.array([self.eval(x=x, t=t) for x in X]) for t in T]
-        print_progress(1, 5, prefix=prefix, suffix=sufix, barLength=50)
+        print_progress(1, 5, prefix=prefix, suffix=sufix, bar_length=50)
 
         EXP_VAL_X = np.array([self.expected_value(operator='x', t=t) for t in T]) / (math.sqrt(self.m*self.omega))
-        print_progress(2, 5, prefix=prefix, suffix=sufix, barLength=50)
+        print_progress(2, 5, prefix=prefix, suffix=sufix, bar_length=50)
 
         STD_X = np.sqrt(np.array([self.expected_value(operator='x2', t=t) for t in T]) - EXP_VAL_X ** 2) / (math.sqrt(self.m*self.omega))
-        print_progress(3, 5, prefix=prefix, suffix=sufix, barLength=50)
+        print_progress(3, 5, prefix=prefix, suffix=sufix, bar_length=50)
 
         EXP_VAL_P = np.array([self.expected_value(operator='p', t=t) for t in T]) * (math.sqrt(self.m*self.omega))
-        print_progress(4, 5, prefix=prefix, suffix=sufix, barLength=50)
+        print_progress(4, 5, prefix=prefix, suffix=sufix, bar_length=50)
 
         STD_P = np.sqrt(np.array([self.expected_value(operator='p2', t=t) for t in T]) - EXP_VAL_P ** 2) * (math.sqrt(self.m*self.omega))
-        print_progress(5, 5, prefix=prefix, suffix=sufix, barLength=50)
+        print_progress(5, 5, prefix=prefix, suffix=sufix, bar_length=50)
 
         '''Definició/Inicialització de tots els plots a les 2 differents subfigures. 1a: Plot XY, 2a: Plot XP.'''
         fig, (ax1, ax2) = plt.subplots(nrows=1,ncols=2)
@@ -250,17 +250,14 @@ if __name__ == '__main__':
     estat = Estat(coeffs=coeffs, m=M, k=K)
 
     ani0, _ = estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
-    ani0.save('ona0.mp4',bitrate=6500)
+    # ani0.save('ona0.mp4',bitrate=6500)
 
-    # plot_ehrenfest(estat, t0=t0, tf=tf, nt=nt)
+    plot_ehrenfest(estat, t0=t0, tf=tf, nt=nt)
     #
     estat.traslacio(x0=3)
     ani_traslacio, _ = estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
-    ani_traslacio.save('ona_trasl.mp4', bitrate=6500)
-    #
-    #
-    #
-    # plot_ehrenfest(estat, t0=t0, tf=tf, nt=nt)
+    # ani_traslacio.save('ona_trasl.mp4', bitrate=6500)
+    plot_ehrenfest(estat, t0=t0, tf=tf, nt=nt)
 
     # estat.kick(p0=2)
     # estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
