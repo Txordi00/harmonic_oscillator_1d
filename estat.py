@@ -45,25 +45,45 @@ class Estat:
     '''Fer Kick implica donar-li un impuls p0 al moment emmagatzemat a la funció d'ona. Posteriorment recalculem la descomposició
     de la ona en les funcions pròpies.'''
     def kick(self,p0):
-        self.ona.p0 = self.ona.p0 + p0
+        self.ona.p0 = p0
         self.ona.update_coeffs()
+        self.ona.p0 = 0
         self.coeffs = self.ona.coeffs
 
     '''Trasladar implica aplicar un desplaçament a la x0 emmagatzemada a la funció d'ona. Posteriorment recalculem la descomposició
     de la ona en les funcions pròpies.'''
     def traslacio(self,x0):
-        self.ona.x0 = self.ona.x0 + x0
+        self.ona.x0 = x0
         self.ona.update_coeffs()
+        self.ona.x0 = 0
         self.coeffs = self.ona.coeffs
+
+    '''Traslació i kick simultanis.'''
+    def traslacio_kick(self,x0,p0):
+        self.ona.x0 = x0
+        self.ona.p0 = p0
+        self.ona.update_coeffs()
+        self.ona.x0 = 0
+        self.ona.p0 = 0
+        self.coeffs = self.ona.coeffs
+
+    '''Valor esperat'''
+    def valor_esperat(self, operator, t):
+        return self.ona.expected_value(operator,t)
+
+    '''Desviació estàndard'''
+    def std(self,operator,t):
+        assert(operator.lower() in ['x','p'])
+        return math.sqrt(self.ona.expected_value(operator+'2',t) - self.ona.expected_value(operator,t)**2)
 
 ''' Classe Funció d'ona. Aquí avaluem la funció d'ona i, per si es útil consultar-ho, emmagatzenem els darrers x i t, els coeficients
  i les constants a0 i omega. '''
 class FuncioOna:
     ''' Inicialització de la classe. Guardem les constants i els coeficients cn. '''
-    def __init__(self,coeffs, m=M, k=K, x0=0, p0=0):
+    def __init__(self,coeffs, m=M, k=K):
         self.coeffs = coeffs
-        self.x0 = x0
-        self.p0 = p0
+        self.x0 = 0
+        self.p0 = 0
         self.m = m
         self.k = k
         self.omega = math.sqrt(k/m)
@@ -139,7 +159,7 @@ class FuncioOna:
         X = np.linspace(x0, xf, nx)
         T = np.linspace(t0, tf, nt)
         V = 1./2.*self.k*X**2
-        print('Calculant els valors de la funció de ona...')
+        print('Calculant els valors de la funció d\'ona...')
         Y = [np.array([self.eval(x=x, t=t) for x in X]) for t in T]
         EXP_VAL_X = np.array([self.expected_value(operator='x', t=t) for t in T]) / (math.sqrt(self.m*self.omega))
         STD_X = np.sqrt(np.array([self.expected_value(operator='x2', t=t) for t in T]) - EXP_VAL_X ** 2) / (math.sqrt(self.m*self.omega))
@@ -164,14 +184,16 @@ class FuncioOna:
         handles, labels = ax1.get_legend_handles_labels()
         ax1.legend(handles, labels)
         lines = [linia_real, linia_imag, linia_prob, linia_exp, linia_pot]
+
         '''Inicialització plot XP'''
         ax2.grid(True, which='both')
         ax2.axhline(y=0, color='k')
         ax2.axvline(x=0, color='k')
         xlim_xp = max(abs(np.min(EXP_VAL_X-STD_X)), abs(np.max(EXP_VAL_X+STD_X)))*1.25
         ylim_xp = max(abs(np.min(EXP_VAL_P-STD_P)), abs(np.max(EXP_VAL_P+STD_P)))*1.25
-        ax2.set_xlim(-xlim_xp, xlim_xp)
-        ax2.set_ylim(-ylim_xp, ylim_xp)
+        lim_xp = max(xlim_xp,ylim_xp)
+        ax2.set_xlim(-lim_xp, lim_xp)
+        ax2.set_ylim(-lim_xp, lim_xp)
         errobj_xp = ax2.errorbar(EXP_VAL_X[0], EXP_VAL_P[0], color='r', xerr=STD_X[0], yerr=STD_P[0],
                              label=r'$(\Delta x(t),\Delta p(t))$',
                              animated=True)
@@ -212,28 +234,18 @@ if __name__ == '__main__':
     nt = 100
 
     coeffs = np.array([1])
-    estat = Estat(coeffs=coeffs, m=M, k=1)
-
-    # int_phi = lambda x, n, a0: abs(phi_n(x=x,n=n,a0=a0))**2
-    # int_ona = lambda x: abs(estat.ona.eval(x=x,t=0))**2
-    # I_phi = integrate.quad(func=int_phi, a=-np.inf, b=+np.inf, args=(0,1))[0]
-    # print('Àrea phi: ' + str(abs(I_phi)**2))
-    # I_ona = integrate.quad(func=int_ona, a=-np.inf, b=+np.inf)[0]
-    # print('Àrea ona: ' + str(abs(I_ona)**2))
+    estat = Estat(coeffs=coeffs, m=M, k=K)
 
     estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
-    # estat.ona.plot_xp(t0=t0,tf=tf,nt=nt)
 
-    estat.traslacio(x0=1)
-    estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
-    # estat.ona.plot_xp(t0=t0, tf=tf, nt=nt)
+    # estat.traslacio(x0=3)
+    # estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
 
-    estat.kick(p0=2)
-    estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
-    # estat.ona.plot_xp(t0=t0, tf=tf, nt=nt)
-    #
-    # estat.kick(p0=-8)
-    # estat.ona.plot(x0=x0,xf=xf,t0=tf+t0,tf=tf+tf,nx=nx,nt=nt)
-    #
+    # estat.kick(p0=2)
+    # estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
+
+    estat.traslacio_kick(x0=2,p0=2)
+    estat.ona.plot(x0=x0, xf=xf, t0=t0, tf=tf, nx=nx, nt=nt)
+
 
     print('Sortida Correcta')
