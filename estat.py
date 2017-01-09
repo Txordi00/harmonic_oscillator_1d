@@ -9,7 +9,7 @@ import matplotlib.pylab as plt
 import matplotlib.animation as animation
 from matplotlib.patches import Ellipse
 import sys
-from funcions_extra import *
+from altres_funcions import *
 
 HBAR = 1
 M = 1
@@ -68,11 +68,11 @@ class Estat:
         self.coeffs = self.ona.coeffs
 
     '''Valor esperat'''
-    def valor_esperat(self, operator, t):
+    def valor_esperat(self, t, operator):
         return self.ona.expected_value(operator,t)
 
     '''Desviació estàndard'''
-    def std(self,operator,t):
+    def std(self, t, operator):
         assert(operator.lower() in ['x','p'])
         return math.sqrt(self.ona.expected_value(operator+'2',t) - self.ona.expected_value(operator,t)**2)
 
@@ -128,7 +128,7 @@ class FuncioOna:
             accum_prob = accum_prob + abs(cn)**2
             n = n + 1
             # print('coeficient ' + str(n) + ', probabilitat acumulada: ' + str(accum_prob))
-        print(str(n) + ' coeficients amb precissió ' + str(accum_prob))
+        print(str(n) + ' coeficients amb precisió ' + str(accum_prob))
         self.coeffs = np.array(coeffs_aux)
 
     '''Funcio per calcular els valors esperats. Per seleccionar el valor què vols s'ha de escollir un operador x, x2, p, p2.'''
@@ -159,12 +159,24 @@ class FuncioOna:
         X = np.linspace(x0, xf, nx)
         T = np.linspace(t0, tf, nt)
         V = 1./2.*self.k*X**2
-        print('Calculant els valors de la funció d\'ona...')
+        prefix = '[Funció Ona] Calculant valors:'
+        sufix = 'Acabat'
+        print_progress(0, 5, prefix=prefix, suffix=sufix, barLength=50)
+
         Y = [np.array([self.eval(x=x, t=t) for x in X]) for t in T]
+        print_progress(1, 5, prefix=prefix, suffix=sufix, barLength=50)
+
         EXP_VAL_X = np.array([self.expected_value(operator='x', t=t) for t in T]) / (math.sqrt(self.m*self.omega))
+        print_progress(2, 5, prefix=prefix, suffix=sufix, barLength=50)
+
         STD_X = np.sqrt(np.array([self.expected_value(operator='x2', t=t) for t in T]) - EXP_VAL_X ** 2) / (math.sqrt(self.m*self.omega))
+        print_progress(3, 5, prefix=prefix, suffix=sufix, barLength=50)
+
         EXP_VAL_P = np.array([self.expected_value(operator='p', t=t) for t in T]) * (math.sqrt(self.m*self.omega))
+        print_progress(4, 5, prefix=prefix, suffix=sufix, barLength=50)
+
         STD_P = np.sqrt(np.array([self.expected_value(operator='p2', t=t) for t in T]) - EXP_VAL_P ** 2) * (math.sqrt(self.m*self.omega))
+        print_progress(5, 5, prefix=prefix, suffix=sufix, barLength=50)
 
         '''Definició/Inicialització de tots els plots a les 2 differents subfigures. 1a: Plot XY, 2a: Plot XP.'''
         fig, (ax1, ax2) = plt.subplots(nrows=1,ncols=2)
@@ -214,13 +226,14 @@ class FuncioOna:
             '''Plot XP'''
             patch = [ax2.add_patch(Ellipse(xy=(EXP_VAL_X[n],EXP_VAL_P[n]), width=2.*STD_X[n], height=2.*STD_P[n], color='c', alpha=0.5))]
             lines_err_xp = adjust_err_bar(errobj=errobj_xp,x=EXP_VAL_X[n],y=EXP_VAL_P[n],x_error=STD_X[n],y_error=STD_P[n])
-
+            '''Tornem tot el que volem actualitzar. La resta de la figura es mantindrà intacta per estalviar recursos.'''
             return lines + lines_err + patch + lines_err_xp
 
         '''Animació eficient.'''
         ani = animation.FuncAnimation(fig, animate, range(len(T)),
                                       interval=100, blit=True, repeat=False)
         plt.show()
+        return ani, plt
 
 
 
@@ -236,16 +249,24 @@ if __name__ == '__main__':
     coeffs = np.array([1])
     estat = Estat(coeffs=coeffs, m=M, k=K)
 
-    estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
+    ani0, _ = estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
+    ani0.save('ona0.mp4',bitrate=6500)
 
-    # estat.traslacio(x0=3)
-    # estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
+    # plot_ehrenfest(estat, t0=t0, tf=tf, nt=nt)
+    #
+    estat.traslacio(x0=3)
+    ani_traslacio, _ = estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
+    ani_traslacio.save('ona_trasl.mp4', bitrate=6500)
+    #
+    #
+    #
+    # plot_ehrenfest(estat, t0=t0, tf=tf, nt=nt)
 
     # estat.kick(p0=2)
     # estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
 
-    estat.traslacio_kick(x0=2,p0=2)
-    estat.ona.plot(x0=x0, xf=xf, t0=t0, tf=tf, nx=nx, nt=nt)
+    # estat.traslacio_kick(x0=2,p0=2)
+    # estat.ona.plot(x0=x0, xf=xf, t0=t0, tf=tf, nx=nx, nt=nt)
 
 
     print('Sortida Correcta')
