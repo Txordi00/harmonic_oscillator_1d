@@ -32,15 +32,31 @@ def phi_n(x, n, a0):
     fx = math.exp(-xbar**2/2) * np.polynomial.hermite.hermval(x=xbar, c=coeff)
     return fn * fx
 
+'''Funció secció 4 dels estats de mínima indeterminació.'''
+def psi_squeezed(x, p0=0, x0=0, m=M, k=K, xi=0):
+    omega = math.sqrt(k/m)
+    delta_x = math.sqrt(HBAR/(2.*m*omega))*math.exp(-xi)
+    return cmath.exp(1j*p0*x/HBAR) * math.exp(-(x-x0)**2/(4.*delta_x**2))
+
 ''' Classe Estat. Aquí emmagatzemo tota la informació rellevant del estat. Gran part de la funcionalitat es subordinarà
- a altres classes/funcions. '''
+    a la classe FuncioOna. Podem definir un estat mitjançant els coeficients de les funcions pròpies 'coeffs' o mitjançant una
+    funció qualsevol 'fx' (com fem a la secció 4). La funció fx rep el valor x com a primer argument i NO s'ha d'especificar
+    a fx_args. La resta d'arguments de la funció (si n'hi han) vindràn en ordre a fx_args.'''
 class Estat:
-    def __init__(self, coeffs, m=M, k=K):
+    def __init__(self, coeffs=None, m=M, k=K, fx = None, fx_args=()):
+        assert (coeffs is not None or fx is not None)
         self.m = m
         self.k = k
-        self.coeffs = coeffs / np.linalg.norm(coeffs)
+        self.coeffs = coeffs
+        if(coeffs is not None):
+            self.coeffs = coeffs / np.linalg.norm(coeffs)
         '''Dintre d'estat guardem la funció d'ona.'''
-        self.ona = FuncioOna(coeffs=self.coeffs,m=self.m,k=self.k)
+        self.ona = FuncioOna(coeffs=self.coeffs,m=self.m,k=self.k,fx=fx,fx_args=fx_args)
+        if(fx is not None):
+            self.ona.update_coeffs()
+            self.ona.fx = None
+            self.coeffs = self.ona.coeffs
+
 
     '''Fer Kick implica donar-li un impuls p0 al moment emmagatzemat a la funció d'ona. Posteriorment recalculem la descomposició
     de la ona en les funcions pròpies.'''
@@ -76,12 +92,20 @@ class Estat:
         assert(operator.lower() in ['x','p'])
         return math.sqrt(self.ona.expected_value(operator+'2',t) - self.ona.expected_value(operator,t)**2)
 
-''' Classe Funció d'ona. Aquí avaluem la funció d'ona i, per si es útil consultar-ho, emmagatzenem els darrers x i t, els coeficients
- i les constants a0 i omega. '''
+''' Classe Funció d'ona. Aquí avaluem la funció d'ona i els seus valors esperats i fem els plots. La classe Estat s'encarrega
+    de gestionar els passos generals a seguir i aquí es fan els càlculs. De la mateixa manera que hem dit a Estat, podem partir
+    dels coeficients de les funcions pròpies o d'una funció qualsevol de x 'fx'.'''
 class FuncioOna:
     ''' Inicialització de la classe. Guardem les constants i els coeficients cn. '''
-    def __init__(self,coeffs, m=M, k=K):
+    def __init__(self, coeffs=None, m=M, k=K, fx=None, fx_args=()):
+        assert(coeffs is not None or fx is not None)
         self.coeffs = coeffs
+        self.fx = fx
+        self.fx_args = fx_args
+        '''Si partim d'una funció fx, la necessitem normalitzada.'''
+        if(self.fx is not None):
+            abs_fx_2 = lambda x: abs(self.fx(x, *self.fx_args))**2
+            self.normaliztion_factor = math.sqrt(1./integrate.quad(func=abs_fx_2,a=-np.inf,b=np.inf)[0])
         self.x0 = 0
         self.p0 = 0
         self.m = m
@@ -99,8 +123,8 @@ class FuncioOna:
     def eval1(self,x,t):
         return cmath.exp(-1j*self.p0*x/HBAR) * self.eval0(x,t)
 
-    '''Apliquem la Traslació.'''
-    def eval(self,x,t):
+    '''Apliquem la Traslació'''
+    def eval2(self,x,t):
         '''De forma pura hauriem d'aproximar l'operador de traslació tal que així:'''
         # '''Defineixo aquesta funció auxiliar perquè només volem calcular la parcial respecte de x.'''
         # def fx(x):
@@ -109,7 +133,16 @@ class FuncioOna:
         #   en un cas real hauriem de aproximar amb més graus.'''
         # return fx(x) - self.x0*sp.misc.derivative(fx,x,dx=1e-18)
         '''Però, com que sabem que U(x0)*f(x,t) = f(x-x0,t):'''
-        return self.eval1(x-self.x0,t)
+        return self.eval1(x - self.x0, t)
+
+    '''Avaluem la funció. En cas que haguem definit la funció amb coeficients, retornem eval2 que és la funció amb el Kick
+       i la Traslació (si n'hi han). En cas contrari, si partim d'una funció, com a la secció 4, tornem el valor de la
+       funció normalitzada amb els seus arguments.'''
+    def eval(self,x,t):
+        if(self.fx is None):
+            return self.eval2(x,t)
+        else:
+            return self.normaliztion_factor * self.fx(x, *self.fx_args)
 
     '''Actualitzem els coeficients calculant la integral de phi_n'(x)*ona(x,0).'''
     def update_coeffs(self):
@@ -122,23 +155,23 @@ class FuncioOna:
         n=0
         coeffs_aux = []
         while (accum_prob<0.99):
-            # cn = integrate.romberg(function=integrand_real,a=-INF,b=+INF,args=(n,),vec_func=False,divmax=10) + 1j*integrate.romberg(function=integrand_imag,a=-INF,b=+INF,args=(n,),vec_func=False,divmax=5)
             cn = integrate.quad(func=integrand_real, a=-np.inf, b=+np.inf, args=(n,))[0] + 1j * integrate.quad(func=integrand_imag, a=-np.inf, b=+np.inf, args=(n,))[0]
             coeffs_aux = coeffs_aux + [cn]
             accum_prob = accum_prob + abs(cn)**2
             n = n + 1
-            # print('coeficient ' + str(n) + ', probabilitat acumulada: ' + str(accum_prob))
         print(str(n) + ' coeficients amb precisió ' + str(accum_prob))
         self.coeffs = np.array(coeffs_aux)
 
     '''Funcio per calcular els valors esperats. Per seleccionar el valor què vols s'ha de escollir un operador x, x2, p, p2.'''
     def expected_value(self, operator, t):
+        '''Definim les funcions per integrar'''
         func_prob = lambda x, t: abs(self.eval(x,t))**2
         func_x = lambda x,t: func_prob(x,t)*x
         func_x2 = lambda x,t: func_prob(x,t)*x**2
         func_p = lambda x,t: (np.conj(self.eval(x,t)) * HBAR/1j * derivative(func=self.eval,x0=x,dx=1e-2,n=1,args=(t,))).real
         func_p2 = lambda x,t: (np.conj(self.eval(x,t)) * (-HBAR**2) * derivative(func=self.eval,x0=x,dx=1e-2,n=2,args=(t,))).real
 
+        '''Calculem els valors esperats segons l'operador.'''
         if(operator.lower()=='x'):
             return integrate.quad(func=func_x, a=-np.inf, b=+np.inf, args=(t,))[0]
         elif(operator.lower()=='x2'):
@@ -159,10 +192,11 @@ class FuncioOna:
         X = np.linspace(x0, xf, nx)
         T = np.linspace(t0, tf, nt)
         V = 1./2.*self.k*X**2
-        prefix = '[Funció Ona] Calculant valors:'
+        prefix = '[Funció Ona] Calculant valors de l\'ona i valors esperats:'
         sufix = 'Acabat'
         print_progress(0, 5, prefix=prefix, suffix=sufix, bar_length=50)
 
+        '''Calculem tots els valors i mostrem el progrés per pantalla'''
         Y = [np.array([self.eval(x=x, t=t) for x in X]) for t in T]
         print_progress(1, 5, prefix=prefix, suffix=sufix, bar_length=50)
 
@@ -236,7 +270,6 @@ class FuncioOna:
         return ani, plt
 
 
-
 '''Main per fer petites proves'''
 if __name__ == '__main__':
     x0 = -10
@@ -252,18 +285,24 @@ if __name__ == '__main__':
     ani0, _ = estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
     # ani0.save('ona0.mp4',bitrate=6500)
 
-    plot_ehrenfest(estat, t0=t0, tf=tf, nt=nt)
+    # plot_ehrenfest(estat, t0=t0, tf=tf, nt=nt)
     #
     estat.traslacio(x0=3)
     ani_traslacio, _ = estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
     # ani_traslacio.save('ona_trasl.mp4', bitrate=6500)
-    plot_ehrenfest(estat, t0=t0, tf=tf, nt=nt)
+    # plot_ehrenfest(estat, t0=t0, tf=tf, nt=nt)
 
     # estat.kick(p0=2)
     # estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
+    # plot_ehrenfest(estat, t0=t0, tf=tf, nt=nt)
 
     # estat.traslacio_kick(x0=2,p0=2)
     # estat.ona.plot(x0=x0, xf=xf, t0=t0, tf=tf, nx=nx, nt=nt)
+
+
+    # fx_args = (p0,x0,m,k,xi) en aquest ordre!!
+    estat = Estat(m=M,k=K,fx=psi_squeezed,fx_args=(1, 0, M, K, 1))
+    estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
 
 
     print('Sortida Correcta')

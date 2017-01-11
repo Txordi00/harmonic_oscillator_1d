@@ -60,7 +60,7 @@ def print_progress(iteration, total, prefix = '', suffix = '', decimals = 1, bar
     sys.stdout.flush()
 
 '''Funció per mostrar les dos igualtats del teorema de Ehrenfest.'''
-def plot_ehrenfest(estat, t0=0,tf=10, nt=100):
+def plot_ehrenfest(estat, t0=0,tf=10, nt=100, fast=False):
     m = estat.m
     k = estat.k
     T = np.linspace(t0, tf, nt)
@@ -71,6 +71,7 @@ def plot_ehrenfest(estat, t0=0,tf=10, nt=100):
     sufix = 'Acabat'
     print_progress(0, 5, prefix=prefix, suffix=sufix, bar_length=50)
 
+    '''Calculem tots els valors'''
     X = np.array([estat.valor_esperat(t=t,operator='x') for t in T])
     print_progress(1, 5, prefix=prefix, suffix=sufix, bar_length=50)
 
@@ -86,6 +87,7 @@ def plot_ehrenfest(estat, t0=0,tf=10, nt=100):
     DP = np.array([derivative(func=estat.valor_esperat, x0=t, dx=1e-2, n=1, args=('p',)) for t in T])
     print_progress(5, 5, prefix=prefix, suffix=sufix, bar_length=50)
 
+    '''Definició i impressió dels plots.'''
     fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2)
     fig.set_size_inches(w=17, h=16. / 9. * 17, forward=True)
 
