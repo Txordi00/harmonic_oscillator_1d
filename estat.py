@@ -243,6 +243,8 @@ class FuncioOna:
         errobj_xp = ax2.errorbar(EXP_VAL_X[0], EXP_VAL_P[0], color='r', xerr=STD_X[0], yerr=STD_P[0],
                              label=r'$(\Delta x(t),\Delta p(t))$',
                              animated=True)
+        ellipse = Ellipse(xy=(EXP_VAL_X[0], EXP_VAL_P[0]), width=2. * STD_X[0], height=2. * STD_P[0], color='c', alpha=0.5)
+        ax2.add_patch(ellipse)
         handles, labels = ax2.get_legend_handles_labels()
         ax2.legend(handles, labels)
 
@@ -258,14 +260,17 @@ class FuncioOna:
             lines[3].set_xdata([EXP_VAL_X[n],EXP_VAL_X[n]])
             lines_err = adjust_err_bar(errobj=errobj,x=EXP_VAL_X[n],y=ylim/4.,x_error=STD_X[n],y_error=0)
             '''Plot XP'''
-            patch = [ax2.add_patch(Ellipse(xy=(EXP_VAL_X[n],EXP_VAL_P[n]), width=2.*STD_X[n], height=2.*STD_P[n], color='c', alpha=0.5))]
+            # patches = [ax2.add_patch(Ellipse(xy=(EXP_VAL_X[n],EXP_VAL_P[n]), width=2.*STD_X[n], height=2.*STD_P[n], color='c', alpha=0.5))]
+            ellipse.center = (EXP_VAL_X[n], EXP_VAL_P[n])
+            ellipse.width = 2.*STD_X[n]
+            ellipse.height = 2.*STD_P[n]
             lines_err_xp = adjust_err_bar(errobj=errobj_xp,x=EXP_VAL_X[n],y=EXP_VAL_P[n],x_error=STD_X[n],y_error=STD_P[n])
             '''Tornem tot el que volem actualitzar. La resta de la figura es mantindrà intacta per estalviar recursos.'''
-            return lines + lines_err + patch + lines_err_xp
+            return lines + lines_err + lines_err_xp + [ellipse]
 
         '''Animació eficient.'''
         ani = animation.FuncAnimation(fig, animate, range(len(T)),
-                                      interval=100, blit=True, repeat=False)
+                                      interval=100, blit=True, repeat=True)
         plt.show()
         return ani, plt
 
@@ -281,18 +286,18 @@ if __name__ == '__main__':
 
     coeffs = np.array([1])
     estat = Estat(coeffs=coeffs, m=M, k=K)
-
-    ani0, _ = estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
-    # ani0.save('ona0.mp4',bitrate=6500)
-
-    # plot_ehrenfest(estat, t0=t0, tf=tf, nt=nt)
     #
-    estat.traslacio(x0=3)
+    ani0, _ = estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
+    # # ani0.save('ona0.mp4',bitrate=6500)
+    #
+    # # plot_ehrenfest(estat, t0=t0, tf=tf, nt=nt)
+    # #
+    estat.traslacio(x0=1)
     ani_traslacio, _ = estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
-    # ani_traslacio.save('ona_trasl.mp4', bitrate=6500)
+    ani_traslacio.save('ona_trasl.mp4', bitrate=6500)
     # plot_ehrenfest(estat, t0=t0, tf=tf, nt=nt)
 
-    # estat.kick(p0=2)
+    # estat.kick(p0=3)
     # estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
     # plot_ehrenfest(estat, t0=t0, tf=tf, nt=nt)
 
@@ -301,8 +306,8 @@ if __name__ == '__main__':
 
 
     # fx_args = (p0,x0,m,k,xi) en aquest ordre!!
-    estat = Estat(m=M,k=K,fx=psi_squeezed,fx_args=(1, 0, M, K, 1))
-    estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
+    # estat = Estat(m=M,k=K,fx=psi_squeezed,fx_args=(1, 0, M, K, 1))
+    # estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
 
 
     print('Sortida Correcta')

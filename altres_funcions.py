@@ -60,7 +60,7 @@ def print_progress(iteration, total, prefix = '', suffix = '', decimals = 1, bar
     sys.stdout.flush()
 
 '''Funció per mostrar les dos igualtats del teorema de Ehrenfest.'''
-def plot_ehrenfest(estat, t0=0,tf=10, nt=100, fast=False):
+def plot_ehrenfest(estat, t0=0,tf=10, nt=100):
     m = estat.m
     k = estat.k
     T = np.linspace(t0, tf, nt)
