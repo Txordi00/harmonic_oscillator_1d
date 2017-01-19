@@ -11,9 +11,12 @@ from matplotlib.patches import Ellipse
 import sys
 from altres_funcions import *
 
+'''Constants globals.'''
 HBAR = 1
 M = 1
 K = 1
+'''Per fer-ho anar tot més ràpit, es recomanable baixar la tolerància si no volem massa precissió'''
+TOL = 1e-4
 
 '''Energía per cada n'''
 def E_n(n, omega):
@@ -39,9 +42,9 @@ def psi_squeezed(x, p0=0, x0=0, m=M, k=K, xi=0):
     return cmath.exp(1j*p0*x/HBAR) * math.exp(-(x-x0)**2/(4.*delta_x**2))
 
 ''' Classe Estat. Aquí emmagatzemo tota la informació rellevant del estat. Gran part de la funcionalitat es subordinarà
-    a la classe FuncioOna. Podem definir un estat mitjançant els coeficients de les funcions pròpies 'coeffs' o mitjançant una
-    funció qualsevol 'fx' (com fem a la secció 4). La funció fx rep el valor x com a primer argument i NO s'ha d'especificar
-    a fx_args. La resta d'arguments de la funció (si n'hi han) vindràn en ordre a fx_args.'''
+    a la classe FuncioOna. Podem definir un estat mitjançant els coeficients de les funcions pròpies 'coeffs' o
+     mitjançant una funció qualsevol 'fx' (com fem a la secció 4). La funció fx rep el valor x com a primer argument i
+     NO s'ha d'especificar a fx_args. La resta d'arguments de la funció (si n'hi han) vindràn en ordre a fx_args.'''
 class Estat:
     def __init__(self, coeffs=None, m=M, k=K, fx = None, fx_args=()):
         assert (coeffs is not None or fx is not None)
@@ -58,16 +61,16 @@ class Estat:
             self.coeffs = self.ona.coeffs
 
 
-    '''Fer Kick implica donar-li un impuls p0 al moment emmagatzemat a la funció d'ona. Posteriorment recalculem la descomposició
-    de la ona en les funcions pròpies.'''
+    '''Fer Kick implica donar-li un impuls p0 al moment emmagatzemat a la funció d'ona. Posteriorment recalculem la
+    descomposició de la ona en les funcions pròpies.'''
     def kick(self,p0):
         self.ona.p0 = p0
         self.ona.update_coeffs()
         self.ona.p0 = 0
         self.coeffs = self.ona.coeffs
 
-    '''Trasladar implica aplicar un desplaçament a la x0 emmagatzemada a la funció d'ona. Posteriorment recalculem la descomposició
-    de la ona en les funcions pròpies.'''
+    '''Trasladar implica aplicar un desplaçament a la x0 emmagatzemada a la funció d'ona. Posteriorment recalculem
+    la descomposició de la ona en les funcions pròpies.'''
     def traslacio(self,x0):
         self.ona.x0 = x0
         self.ona.update_coeffs()
@@ -92,9 +95,9 @@ class Estat:
         assert(operator.lower() in ['x','p'])
         return math.sqrt(self.ona.expected_value(operator+'2',t) - self.ona.expected_value(operator,t)**2)
 
-''' Classe Funció d'ona. Aquí avaluem la funció d'ona i els seus valors esperats i fem els plots. La classe Estat s'encarrega
-    de gestionar els passos generals a seguir i aquí es fan els càlculs. De la mateixa manera que hem dit a Estat, podem partir
-    dels coeficients de les funcions pròpies o d'una funció qualsevol de x 'fx'.'''
+''' Classe Funció d'ona. Aquí avaluem la funció d'ona i els seus valors esperats i fem els plots. La classe Estat
+s'encarrega de gestionar els passos generals a seguir i aquí es fan els càlculs. De la mateixa manera que hem dit a
+Estat, podem partir dels coeficients de les funcions pròpies o d'una funció qualsevol de x 'fx'.'''
 class FuncioOna:
     ''' Inicialització de la classe. Guardem les constants i els coeficients cn. '''
     def __init__(self, coeffs=None, m=M, k=K, fx=None, fx_args=()):
@@ -106,6 +109,7 @@ class FuncioOna:
         if(self.fx is not None):
             abs_fx_2 = lambda x: abs(self.fx(x, *self.fx_args))**2
             self.normaliztion_factor = math.sqrt(1./integrate.quad(func=abs_fx_2,a=-np.inf,b=np.inf)[0])
+            print('[Normalització] Constant de normalització C: ' + str(self.normaliztion_factor))
         self.x0 = 0
         self.p0 = 0
         self.m = m
@@ -117,7 +121,8 @@ class FuncioOna:
     def eval0(self,x,t):
         N = np.size(self.coeffs)
 
-        return np.sum(np.array([self.coeffs[n]*phi_n(x=x,n=n,a0=self.a0) * exp_t(E_n=E_n(n,self.omega),t=t) for n in range(N)]))
+        return np.sum(np.array([self.coeffs[n]*phi_n(x=x,n=n,a0=self.a0) * exp_t(E_n=E_n(n,self.omega),t=t)
+                                for n in range(N)]))
 
     '''Apliquem el Kick.'''
     def eval1(self,x,t):
@@ -154,8 +159,9 @@ class FuncioOna:
         accum_prob = 0
         n=0
         coeffs_aux = []
-        while (accum_prob<0.99):
-            cn = integrate.quad(func=integrand_real, a=-np.inf, b=+np.inf, args=(n,))[0] + 1j * integrate.quad(func=integrand_imag, a=-np.inf, b=+np.inf, args=(n,))[0]
+        while (accum_prob<(1.-TOL)):
+            cn = integrate.quad(func=integrand_real, a=-np.inf, b=+np.inf, args=(n,))[0] + 1j * \
+                                            integrate.quad(func=integrand_imag, a=-np.inf, b=+np.inf, args=(n,))[0]
             coeffs_aux = coeffs_aux + [cn]
             accum_prob = accum_prob + abs(cn)**2
             n = n + 1
@@ -168,8 +174,10 @@ class FuncioOna:
         func_prob = lambda x, t: abs(self.eval(x,t))**2
         func_x = lambda x,t: func_prob(x,t)*x
         func_x2 = lambda x,t: func_prob(x,t)*x**2
-        func_p = lambda x,t: (np.conj(self.eval(x,t)) * HBAR/1j * derivative(func=self.eval,x0=x,dx=1e-2,n=1,args=(t,))).real
-        func_p2 = lambda x,t: (np.conj(self.eval(x,t)) * (-HBAR**2) * derivative(func=self.eval,x0=x,dx=1e-2,n=2,args=(t,))).real
+        func_p = lambda x,t: (np.conj(self.eval(x,t)) * HBAR/1j * derivative(func=self.eval,x0=x,dx=1e-2,n=1,
+                                                                             args=(t,))).real
+        func_p2 = lambda x,t: (np.conj(self.eval(x,t)) * (-HBAR**2) * derivative(func=self.eval,x0=x,dx=1e-2,n=2,
+                                                                                 args=(t,))).real
 
         '''Calculem els valors esperats segons l'operador.'''
         if(operator.lower()=='x'):
@@ -185,8 +193,8 @@ class FuncioOna:
 
 
 
-    ''' Dibuixem la ona en un rang de X i de T. Aprofitem que només hem de reescriure les línies i no els eixos i tota la resta de la figura
-    per fer-ho de forma eficient amb blit.'''
+    ''' Dibuixem la ona en un rang de X i de T. Aprofitem que només hem de reescriure les línies i no els eixos i tota
+     la resta de la figura per fer-ho de forma eficient amb blit.'''
     def plot(self, x0=-10, xf=10, t0=0, tf=10, nx=480, nt=100):
         '''Valors de les X i T i valors inicials de la funció d'ona Y.'''
         X = np.linspace(x0, xf, nx)
@@ -203,13 +211,15 @@ class FuncioOna:
         EXP_VAL_X = np.array([self.expected_value(operator='x', t=t) for t in T]) / (math.sqrt(self.m*self.omega))
         print_progress(2, 5, prefix=prefix, suffix=sufix, bar_length=50)
 
-        STD_X = np.sqrt(np.array([self.expected_value(operator='x2', t=t) for t in T]) - EXP_VAL_X ** 2) / (math.sqrt(self.m*self.omega))
+        STD_X = np.sqrt(np.array([self.expected_value(operator='x2', t=t) for t in T]) - EXP_VAL_X ** 2) / \
+                (math.sqrt(self.m*self.omega))
         print_progress(3, 5, prefix=prefix, suffix=sufix, bar_length=50)
 
         EXP_VAL_P = np.array([self.expected_value(operator='p', t=t) for t in T]) * (math.sqrt(self.m*self.omega))
         print_progress(4, 5, prefix=prefix, suffix=sufix, bar_length=50)
 
-        STD_P = np.sqrt(np.array([self.expected_value(operator='p2', t=t) for t in T]) - EXP_VAL_P ** 2) * (math.sqrt(self.m*self.omega))
+        STD_P = np.sqrt(np.array([self.expected_value(operator='p2', t=t) for t in T]) - EXP_VAL_P ** 2) * \
+                (math.sqrt(self.m*self.omega))
         print_progress(5, 5, prefix=prefix, suffix=sufix, bar_length=50)
 
         '''Definició/Inicialització de tots els plots a les 2 differents subfigures. 1a: Plot XY, 2a: Plot XP.'''
@@ -224,8 +234,10 @@ class FuncioOna:
         linia_real = ax1.plot(X, Y[0].real, 'b', label=r'$Re[\psi(x,t)]$', animated=True)[0]
         linia_imag = ax1.plot(X, Y[0].imag, 'r', label=r'$Im[\psi(x,t)]$', animated=True)[0]
         linia_prob = ax1.plot(X, abs(Y[0])**2, 'y', label=r'$|\psi(x,t)|^2$', animated=True)[0]
-        linia_exp = ax1.plot([EXP_VAL_X[0],EXP_VAL_X[0]], [-ylim,ylim], 'k', label=r'$\langle x \rangle_\psi(t)$', animated=True)[0]
-        errobj = ax1.errorbar(EXP_VAL_X[0], ylim/4., color='k', xerr=STD_X[0], yerr=0, label=r'$\Delta x(t)$', animated=True)
+        linia_exp = ax1.plot([EXP_VAL_X[0],EXP_VAL_X[0]], [-ylim,ylim], 'k', label=r'$\langle x \rangle_\psi(t)$',
+                             animated=True)[0]
+        errobj = ax1.errorbar(EXP_VAL_X[0], ylim/4., color='k', xerr=STD_X[0], yerr=0, label=r'$\Delta x(t)$',
+                              animated=True)
         linia_pot = ax1.plot(X, V-ylim, 'g', label=r'$V(x)$', animated=False)[0]
         handles, labels = ax1.get_legend_handles_labels()
         ax1.legend(handles, labels)
@@ -243,7 +255,10 @@ class FuncioOna:
         errobj_xp = ax2.errorbar(EXP_VAL_X[0], EXP_VAL_P[0], color='r', xerr=STD_X[0], yerr=STD_P[0],
                              label=r'$(\Delta x(t),\Delta p(t))$',
                              animated=True)
-        ellipse = Ellipse(xy=(EXP_VAL_X[0], EXP_VAL_P[0]), width=2. * STD_X[0], height=2. * STD_P[0], color='c', alpha=0.5)
+        ellipse = Ellipse(xy=(EXP_VAL_X[0], EXP_VAL_P[0]), width=2. * STD_X[0], height=2. * STD_P[0], color='c',
+                          alpha=0.5)
+        heisenberg = ax2.text(xlim_xp*0.6, -ylim_xp*0.9, r'$\Delta x\Delta p=$' + "{0:.2f}".format(STD_X[0]*STD_P[0]),
+                              fontsize=12)
         ax2.add_patch(ellipse)
         handles, labels = ax2.get_legend_handles_labels()
         ax2.legend(handles, labels)
@@ -260,13 +275,16 @@ class FuncioOna:
             lines[3].set_xdata([EXP_VAL_X[n],EXP_VAL_X[n]])
             lines_err = adjust_err_bar(errobj=errobj,x=EXP_VAL_X[n],y=ylim/4.,x_error=STD_X[n],y_error=0)
             '''Plot XP'''
-            # patches = [ax2.add_patch(Ellipse(xy=(EXP_VAL_X[n],EXP_VAL_P[n]), width=2.*STD_X[n], height=2.*STD_P[n], color='c', alpha=0.5))]
+            # patches = [ax2.add_patch(Ellipse(xy=(EXP_VAL_X[n],EXP_VAL_P[n]), width=2.*STD_X[n], height=2.*STD_P[n],
+            # color='c', alpha=0.5))]
             ellipse.center = (EXP_VAL_X[n], EXP_VAL_P[n])
             ellipse.width = 2.*STD_X[n]
             ellipse.height = 2.*STD_P[n]
-            lines_err_xp = adjust_err_bar(errobj=errobj_xp,x=EXP_VAL_X[n],y=EXP_VAL_P[n],x_error=STD_X[n],y_error=STD_P[n])
+            lines_err_xp = adjust_err_bar(errobj=errobj_xp,x=EXP_VAL_X[n],y=EXP_VAL_P[n],x_error=STD_X[n],
+                                          y_error=STD_P[n])
+            heisenberg.set_text(r'$\Delta x\Delta p=$' + "{0:.2f}".format(STD_X[n]*STD_P[n]))
             '''Tornem tot el que volem actualitzar. La resta de la figura es mantindrà intacta per estalviar recursos.'''
-            return lines + lines_err + lines_err_xp + [ellipse]
+            return lines + lines_err + lines_err_xp + [ellipse] + [heisenberg]
 
         '''Animació eficient.'''
         ani = animation.FuncAnimation(fig, animate, range(len(T)),
@@ -277,37 +295,56 @@ class FuncioOna:
 
 '''Main per fer petites proves'''
 if __name__ == '__main__':
-    x0 = -10
+    xi = -10
     xf = 10
-    t0 = 0
+    ti = 0
     tf = 10
     nx = 480
     nt = 100
 
+    '''Per començar, definim la nostra funció inicial amb els coeficients. Podem escollir altres coeficients també,
+    per exemple [1,1] per la combinació 1/sqrt(2)*(psi_0 + psi_1).'''
     coeffs = np.array([1])
     estat = Estat(coeffs=coeffs, m=M, k=K)
     #
-    ani0, _ = estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
-    # # ani0.save('ona0.mp4',bitrate=6500)
-    #
-    # # plot_ehrenfest(estat, t0=t0, tf=tf, nt=nt)
-    # #
-    estat.traslacio(x0=1)
-    ani_traslacio, _ = estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
-    ani_traslacio.save('ona_trasl.mp4', bitrate=6500)
-    # plot_ehrenfest(estat, t0=t0, tf=tf, nt=nt)
+    '''Animació de l'evolució de la funció d'ona. Es poden guardar les animacions fàcilment com un video amb
+    ani.save('nom_fitxer').'''
+    ani0, _ = estat.ona.plot(x0=xi,xf=xf,t0=ti,tf=tf,nx=nx,nt=nt)
+    # ani0.save('ona0.mp4',bitrate=6500)
 
-    # estat.kick(p0=3)
-    # estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
-    # plot_ehrenfest(estat, t0=t0, tf=tf, nt=nt)
+    '''Aplicar un operador es tan senzill com fer estat.operador(valor0).'''
+    # estat.traslacio(x0=3)
+    # ani_traslacio, _ = estat.ona.plot(x0=xi,xf=xf,t0=ti,tf=tf,nx=nx,nt=nt)
+    # ani_traslacio.save('ona_trasl.mp4', bitrate=6500)
+    # plot_ehrenfest(estat, t0=ti, tf=tf, nt=nt)
+    estat.kick(p0=3)
+    ani, _ = estat.ona.plot(x0=xi,xf=xf,t0=ti,tf=tf,nx=nx,nt=nt)
+    # ani.save('ona_kick.mp4', bitrate=6500)
+    '''Podem, a més del propi plot de l'evolució de l'ona al espai habitual i al espai x-p, imprimir
+    la comprovació del teorema d'Ehrenfest, imprimir els valors esperats i les indeterminacions, i imprimir també
+    el valor de la incertesa de Heisenberg (delta_x*delta_p).'''
+    plot_ehrenfest(estat, t0=ti, tf=tf, nt=nt)
+    plot_valoresp(estat, t0=ti, tf=tf, nt=nt)
+    plot_heisenberg(estat, t0=ti, tf=tf, nt=nt)
 
-    # estat.traslacio_kick(x0=2,p0=2)
-    # estat.ona.plot(x0=x0, xf=xf, t0=t0, tf=tf, nx=nx, nt=nt)
+    '''Podem fer una traslació i un kick simultanis també.'''
+    # estat.traslacio_kick(x0=3,p0=3)
+    # ani, _ = estat.ona.plot(x0=xi, xf=xf, t0=ti, tf=tf, nx=nx, nt=nt)
+    # ani.save('ona_kick_traslacio.mp4', bitrate=6500)
+    # plot_ehrenfest(estat, t0=ti, tf=tf, nt=nt)
 
-
+    '''Si no coneixem o no necessitem els coeficients inicials (com en el cas de la secció 4), podem definir l'estat
+    a partir d'una funció fx(x). Opcionalment, es poden enviar arguments extra a la funció (la x ha d'anar al inici de
+    fx(x,*args) SEMPRE! i NO la enviem aquí, es tracta internament).'''
     # fx_args = (p0,x0,m,k,xi) en aquest ordre!!
-    # estat = Estat(m=M,k=K,fx=psi_squeezed,fx_args=(1, 0, M, K, 1))
-    # estat.ona.plot(x0=x0,xf=xf,t0=t0,tf=tf,nx=nx,nt=nt)
+    (p0,x0,m,k,xi_scale) = (2, 0, M, K, 1)
+    estat = Estat(m=M,k=K,fx=psi_squeezed,fx_args=(p0,x0,m,k,xi_scale))
+    # ani, _ = estat.ona.plot(x0=xi,xf=xf,t0=ti,tf=tf,nx=nx,nt=nt)
+    # plot_ehrenfest(estat, t0=ti, tf=tf, nt=nt)
+    # plot_valoresp(estat, t0=ti, tf=tf, nt=nt)
+    plot_heisenberg(estat, t0=ti, tf=tf, nt=nt)
+    # ani.save('estat_squeezed_kick_xi0_heisenberg.mp4',bitrate=6500)
+
 
 
     print('Sortida Correcta')

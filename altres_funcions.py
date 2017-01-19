@@ -105,3 +105,86 @@ def plot_ehrenfest(estat, t0=0,tf=10, nt=100):
 
     return plt
 
+'''Funció per hacer los plots de los valores esperados.'''
+def plot_valoresp(estat, t0=0, tf=10, nt=100):
+    m = estat.m
+    k = estat.k
+    T = np.linspace(t0, tf, nt)
+
+    prefix = '[Valors esperats] Calculant valors esperats:'
+    sufix = 'Acabat'
+    print_progress(0, 7, prefix=prefix, suffix=sufix, bar_length=50)
+
+    '''Calculem tots els valors'''
+    X = np.array([estat.valor_esperat(t=t, operator='x') for t in T])
+    print_progress(1, 7, prefix=prefix, suffix=sufix, bar_length=50)
+
+    P = np.array([estat.valor_esperat(t=t, operator='p') for t in T])
+    print_progress(2, 7, prefix=prefix, suffix=sufix, bar_length=50)
+
+    DELTAX = np.array([estat.std(t=t, operator='x') for t in T])
+    print_progress(3, 7, prefix=prefix, suffix=sufix, bar_length=50)
+
+    DELTAP = np.array([estat.std(t=t, operator='p') for t in T])
+    print_progress(4, 7, prefix=prefix, suffix=sufix, bar_length=50)
+
+    V = k / 2. * np.array([estat.valor_esperat(t=t, operator='x2') for t in T])
+    print_progress(5, 7, prefix=prefix, suffix=sufix, bar_length=50)
+
+    K = 1. / (2 * m) * np.array([estat.valor_esperat(t=t, operator='p2') for t in T])
+    print_progress(6, 7, prefix=prefix, suffix=sufix, bar_length=50)
+
+    E = K + V
+    print_progress(7, 7, prefix=prefix, suffix=sufix, bar_length=50)
+
+    '''Definició i impressió dels plots.'''
+    fig, (ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=3)
+    fig.set_size_inches(w=17, h=16. / 9. * 17, forward=True)
+
+    ax1.plot(T, X, 'b', label=r'$\langle x \rangle(t)$')
+    ax1.plot(T, DELTAX, 'r', label=r'$\Delta x (t) $')
+    handles1, labels1 = ax1.get_legend_handles_labels()
+    ax1.legend(handles1, labels1)
+
+    ax2.plot(T, P, 'b', label=r'$\langle p \rangle(t)$')
+    ax2.plot(T, DELTAP, 'r', label=r'$\Delta p (t) $')
+    handles2, labels2 = ax2.get_legend_handles_labels()
+    ax2.legend(handles2, labels2)
+
+    ax3.plot(T, V, 'b', label=r'$\langle V \rangle(t)$')
+    ax3.plot(T, K, 'r', label=r'$\langle K \rangle(t)$')
+    ax3.plot(T, E, 'g', label=r'$\langle E \rangle(t)$')
+    ax3.set_ylim(np.min(V) - 0.25 * np.min(V), np.max(E) + 0.25 * np.max(E))
+    handles3, labels3 = ax3.get_legend_handles_labels()
+    ax3.legend(handles3, labels3)
+
+    plt.show()
+
+    return plt
+
+'''Funció per fer els plot de deltax(t)*deltap(t).'''
+def plot_heisenberg(estat, t0=0, tf=10, nt=100):
+    T = np.linspace(t0, tf, nt)
+
+    prefix = '[Heisenberg] Calculant les incerteses:'
+    sufix = 'Acabat'
+    print_progress(0, 2, prefix=prefix, suffix=sufix, bar_length=50)
+
+    '''Calculem tots els valors'''
+    DELTAX = np.array([estat.std(t=t, operator='x') for t in T])
+    print_progress(1, 2, prefix=prefix, suffix=sufix, bar_length=50)
+
+    DELTAP = np.array([estat.std(t=t, operator='p') for t in T])
+    print_progress(2, 2, prefix=prefix, suffix=sufix, bar_length=50)
+
+    '''Definició i impressió dels plots.'''
+    fig, (ax1) = plt.subplots(nrows=1, ncols=1)
+    fig.set_size_inches(w=17, h=16. / 9. * 17, forward=True)
+
+    ax1.plot(T, np.multiply(DELTAX,DELTAP), 'b', label=r'$\Delta x(t) \Delta p(t)$')
+    handles1, labels1 = ax1.get_legend_handles_labels()
+    ax1.legend(handles1, labels1)
+
+    plt.show()
+
+    return plt
